@@ -15,6 +15,7 @@ import numpy as np
 import json
 
 from collections import OrderedDict
+from drawRatioPlot import PrintGraphs
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
@@ -29,102 +30,9 @@ def GraphToHisto (graph, histo, histoE):
         histo.Fill(graph.GetX()[i], graph.GetY()[i])
         histoE.Fill(graph.GetX()[i], max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
 
-##print the graphs
-def PrintGraphs (daGraph, mcGraph, sfList, varName):
-    ##root sucks
-    daGraph.SetPointEXhigh(daGraph.GetN()-1, 0)
-    daGraph.SetPointEXlow(daGraph.GetN()-1, 0)
-    mcGraph.SetPointEXhigh(mcGraph.GetN()-1, 0)
-    mcGraph.SetPointEXlow(mcGraph.GetN()-1, 0)
-
-    daGraph.SetPointEXhigh(0, 0)
-    daGraph.SetPointEXlow(0, 0)
-    mcGraph.SetPointEXhigh(0, 0)
-    mcGraph.SetPointEXlow(0, 0)
-    logx = False
-    if varName == "pt": logx = True
-    ## root sucks
-    supportEff = ROOT.TH1F("suppE", "", len(sfList), sfList[0][1], sfList[-1][1]*1.1)
-    supportRat = ROOT.TH1F("suppR", "", len(sfList), sfList[0][1], sfList[-1][1]*1.1)
-    ## create the legend
-    legPad = ROOT.TLegend(0.7, 0.35, 0.85, 0.25)
-    legPad.AddEntry(daGraph, "Data", "lp")
-    legPad.AddEntry(mcGraph, "MC"  , "lp")
-    ## set up the gaphs
-    multiG = ROOT.TMultiGraph()
-    multiG.SetTitle("SFs - %s muon ID; %s; efficiency" % (str(sys.argv[1]), varName))
-    multiG.Add(daGraph)
-    multiG.Add(mcGraph)
-    mcGraph.SetLineColor(ROOT.kBlue)
-    daGraph.SetLineColor(ROOT.kRed)
-    mcGraph.SetMarkerStyle(20)
-    daGraph.SetMarkerStyle(22)
-    mcGraph.SetMarkerColor(ROOT.kBlue)
-    daGraph.SetMarkerColor(ROOT.kRed)
-    ## create the SF graph
-    sfGraph = ROOT.TGraphErrors()
-    sfGraph.SetMarkerColor(ROOT.kBlack)
-    sfGraph.SetLineColor(ROOT.kBlack)
-    sfGraph.SetMarkerStyle(8)    
-    sfGraph.SetFillStyle(3004)
-    sfGraph.SetFillColor(ROOT.kBlack)
-    for i in range(len(sfList)):
-        sfGraph.SetPoint( i, 
-                          sfList[i][1],
-                          sfList[i][0].nominal_value
-        )
-        sfGraph.SetPointError( i, 
-                               0,
-                               sfList[i][0].std_dev
-        )
-    ## draw 
-    outCan = ROOT.TCanvas("outCan", "", 700, 1000)
-    outCan.Draw()
-    outCan.cd()
-
-    supPad = ROOT.TPad('effPad', 'effPad', 0., 0.3, 1., 1., 0, 0)
-    supPad.Draw()
-    supPad.cd()
-    supPad.SetGridy(True)
-    supPad.SetBottomMargin(0.2)
-    supPad.SetLogx(logx)
-    
-    
-    supportEff.Draw()
-    multiG.SetMaximum(1.1*ROOT.TMath.MaxElement( mcGraph.GetN(), mcGraph.GetY())) 
-    multiG.SetMinimum(0)
-    multiG.Draw("same p")
-    multiG.GetXaxis().SetLimits(sfList[0][1], sfList[-1][1]*1.1)
-    legPad.Draw("same")
-
-    supPad.Update()
-
-    outCan.cd()
-
-    infPad = ROOT.TPad('ratioPad', 'ratioPad', 0., 0.32, 1, .0, 0, 0)
-    infPad.Draw()
-    infPad.cd()
-    infPad.SetGridx(True)
-    infPad.SetGridy(True)
-    infPad.SetBottomMargin(0.2)
-    infPad.SetLogx(logx)
-
-    supportRat.Draw()
-
-    supportRat.GetYaxis().SetRangeUser( 0.9*min(sfList)[0].nominal_value,
-                                        1.1*max(sfList)[0].nominal_value
-    )
-    sfGraph.GetXaxis().SetLimits(sfList[0][1], sfList[-1][1]*1.1)
-    sfGraph.Draw("PLE3")
-
-    infPad.Update()
-
-    outCan.Update()
-    import pdb ; pdb.set_trace()
-
 ## set up root
 ROOT.gStyle.SetOptStat(0)
-#ROOT.gROOT.SetBatch(ROOT.kTRUE)
+ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = 1001;")
 ROOT.TH1.SetDefaultSumw2()
 
@@ -148,8 +56,8 @@ etaBins    = np.array([-2.4, -2.1, -1.6, -1.2, -0.9, -0.3, -0.2, 0.2, 0.3, 0.9, 
 nVtxBins   = np.array([0.5,2.5,4.5,6.5,8.5,10.5,12.5,14.5,16.5,18.5,20.5,22.5,24.5,26.5,28.5,30.5,32.5,34.5,36.5,38.5,40.5,42.5,44.5,46.5,48.5,50.5])
 
 varList =[  ("pt"   , ptBins  ),
-            ("eta"  , etaBins ),
-            ("nVtx" , nVtxBins),
+            #("eta"  , etaBins ),
+            #("nVtx" , nVtxBins),
 ]
 
 ## json files
