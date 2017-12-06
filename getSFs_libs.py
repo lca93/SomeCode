@@ -7,6 +7,7 @@ import sys, os
 import json
 
 from collections    import OrderedDict
+from itertools      import product
 from drawRatioPlot  import PrintGraphs
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
@@ -53,7 +54,7 @@ def getSFs_1D(plotDirDA, plotDirMC, bins, var, printGraphs):
     for i in range(len(bins)-1):
         num = unc.ufloat(effHistoDA.GetBinContent(i+1), errHistoDA.GetBinContent(i+1))
         den = unc.ufloat(effHistoMC.GetBinContent(i+1), errHistoMC.GetBinContent(i+1))
-        sf  = num/den
+        sf  = num/den if den.nominal_value != 0 else unc.ufloat(0, 0)
 
         SFs.append((sf, effHistoDA.GetXaxis().GetBinCenter(i+1)))
 
@@ -109,61 +110,73 @@ def getSFs_2D(daDir, mcDir, bins):
         else:
             pass
 
-    ## define the matrix (TH2F) that will contain the SFs
-    ## NOTE: pt(eta) means first bin over pt and, in each pt bin, bin over eta (that is abseta list)
-    ##       eta(pt) means first bin over eta and, in each eta bin, bin over pt (that is pt list)
-    pt_eta_H = ROOT.TH2F("pt(eta)", "SFs for pt(eta)  -  %s muonID" % str(sys.argv[1]), 15, 0, 15, 4, 0, 4)
-    eta_pt_H = ROOT.TH2F("pt(eta)", "SFs for eta(pt)  -  %s muonID" % str(sys.argv[1]), 15, 0, 15, 4, 0, 4)
+    ## define the matrix (TH2F) that will contain the SFs and efficiencies
+    SFsHisto = ROOT.TH2F("pt(eta)", "SFs for pt(eta)  -  %s muonID" % str(sys.argv[1]), 15, 0, 15, 4, 0, 4)
+    daEHisto = ROOT.TH2F("pt(eta)", "SFs for pt(eta)  -  %s muonID" % str(sys.argv[1]), 15, 0, 15, 4, 0, 4)
+    mcEHisto = ROOT.TH2F("pt(eta)", "SFs for pt(eta)  -  %s muonID" % str(sys.argv[1]), 15, 0, 15, 4, 0, 4)
 
-    pt_eta_H.GetXaxis().SetTitle("pt [GeV]")
-    pt_eta_H.GetYaxis().SetTitle("abseta")
-    eta_pt_H.GetXaxis().SetTitle("pt [GeV]")
-    eta_pt_H.GetYaxis().SetTitle("abseta")
+    SFsHisto.GetXaxis().SetTitle("pt [GeV]")
+    SFsHisto.GetYaxis().SetTitle("abseta")
+    daEHisto.GetXaxis().SetTitle("pt [GeV]")
+    daEHisto.GetYaxis().SetTitle("abseta")
+    mcEHisto.GetXaxis().SetTitle("pt [GeV]")
+    mcEHisto.GetYaxis().SetTitle("abseta")
+
 
     ## fill the TH2 with the SFs
     ## couple[0] = data
     ## couple[1] = mc
         ## pt(eta)
-    for i, couple in enumerate(absetaGraphList):
-        ## define TH1s to correctly read the graphs
-        daEffH = ROOT.TH1F("effDA", "", len(absetaBins)-1, absetaBins)
-        mcEffH = ROOT.TH1F("effMC", "", len(absetaBins)-1, absetaBins)
-            ## errors
-        EdaEffH = ROOT.TH1F("EeffDA", "", len(absetaBins)-1, absetaBins)
-        EmcEffH = ROOT.TH1F("EeffMC", "", len(absetaBins)-1, absetaBins)
-
-        ## convert the graphs
-        GraphToHisto(couple[0], daEffH, EdaEffH)
-        GraphToHisto(couple[1], mcEffH, EmcEffH)
-
-        ## get the SFs
-        for j in range( len(absetaBins)-1):
-            num = unc.ufloat(daEffH.GetBinContent(j+1), EdaEffH.GetBinContent(j+1))
-            den = unc.ufloat(mcEffH.GetBinContent(j+1), EmcEffH.GetBinContent(j+1))
-            sf  = num/den if den.nominal_value != 0 else unc.ufloat(0, 0)
-            
-            pt_eta_H.SetBinContent(i+1, j+1, sf.nominal_value)
-            pt_eta_H.SetBinError(i+1, j+1, sf.std_dev)
-        ## eta(pt)
     for i, couple in enumerate(ptGraphList):
         ## define TH1s to correctly read the graphs
         daEffH = ROOT.TH1F("effDA", "", len(ptBins)-1, ptBins)
         mcEffH = ROOT.TH1F("effMC", "", len(ptBins)-1, ptBins)
-            ## errors
+        ## errors
         EdaEffH = ROOT.TH1F("EeffDA", "", len(ptBins)-1, ptBins)
         EmcEffH = ROOT.TH1F("EeffMC", "", len(ptBins)-1, ptBins)
-
         ## convert the graphs
         GraphToHisto(couple[0], daEffH, EdaEffH)
         GraphToHisto(couple[1], mcEffH, EmcEffH)
-
         ## get the SFs
         for j in range( len(ptBins)-1):
             num = unc.ufloat(daEffH.GetBinContent(j+1), EdaEffH.GetBinContent(j+1))
             den = unc.ufloat(mcEffH.GetBinContent(j+1), EmcEffH.GetBinContent(j+1))
             sf  = num/den if den.nominal_value != 0 else unc.ufloat(0, 0)
                         
-            eta_pt_H.SetBinContent(i+1, j+1, sf.nominal_value)
-            eta_pt_H.SetBinError(i+1, j+1, sf.std_dev)
+            SFsHisto.SetBinContent(j+1, i+1, sf.nominal_value)
+            SFsHisto.SetBinError(j+1, i+1, sf.std_dev)
 
-    import pdb ; pdb.set_trace()
+            daEHisto.SetBinContent(j+1, i+1, num.nominal_value)
+            daEHisto.SetBinError(j+1, i+1, num.std_dev)
+
+            mcEHisto.SetBinContent(j+1, i+1, den.nominal_value)
+            mcEHisto.SetBinError(j+1, i+1, den.std_dev)
+
+    ## create the Json structures
+    jsonStrucSF = {}
+    jsonStrucMC = {}
+    jsonStrucDA = {}
+
+    ## fill the structures
+    for i in range( len(absetaBins)-1):
+        jsonStrucSF[getBinRange(i, absetaBins)] = {}
+        jsonStrucMC[getBinRange(i, absetaBins)] = {}
+        jsonStrucDA[getBinRange(i, absetaBins)] = {}
+        for j in range( len(ptBins)-1):
+            jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
+            jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
+            jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
+
+            jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = SFsHisto.GetBinContent(j+1, i+1)
+            jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = mcEHisto.GetBinContent(j+1, i+1)
+            jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = daEHisto.GetBinContent(j+1, i+1)
+
+            jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = SFsHisto.GetBinError(j+1, i+1)
+            jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = mcEHisto.GetBinError(j+1, i+1)
+            jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = daEHisto.GetBinError(j+1, i+1)
+
+    return jsonStrucSF, jsonStrucDA, jsonStrucMC
+
+
+
+

@@ -69,6 +69,7 @@ def PrintGraphs (daGraph, mcGraph, sfList, varName):
     ## create the eff. pads
     supPad = ROOT.TPad('effPad', 'effPad', 0., 0.3, 1., 1., 0, 0)
     supPad.SetGridy(True)
+    supPad.SetGridx(True)
     supPad.SetBottomMargin(0.2)
     supPad.SetLogx(logx)
     ## create the ratio pad

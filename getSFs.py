@@ -23,9 +23,9 @@ import uncertainties as unc
 
 ## set up root
 ROOT.gStyle.SetOptStat(0)
-#ROOT.gROOT.SetBatch(ROOT.kTRUE)
+ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.gStyle.SetPaintTextFormat(".3f")
-ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = 1001;")
+ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 ROOT.TH1.SetDefaultSumw2()
 
 ## debug canvas
@@ -46,12 +46,12 @@ printGraphs = False if len(sys.argv)>2                  and\
 ptBins     = np.array([2., 2.5, 2.75, 3., 3.25, 3.5, 3.75, 4., 4.5, 5., 6., 8., 10., 15., 20., 30.])
 etaBins    = np.array([-2.4, -2.1, -1.6, -1.2, -0.9, -0.3, -0.2, 0.2, 0.3, 0.9, 1.2, 1.6, 2.1, 2.4])
 nVtxBins   = np.array([0.5,2.5,4.5,6.5,8.5,10.5,12.5,14.5,16.5,18.5,20.5,22.5,24.5,26.5,28.5,30.5,32.5,34.5,36.5,38.5,40.5,42.5,44.5,46.5,48.5,50.5])
-absetaBins = np.array([0, 0.9, 2.1, 2.4])
+absetaBins = np.array([0, 0.9, 1.2, 2.1, 2.4])
 
-varList =[  #("pt"   , ptBins  ),
-            #("eta"  , etaBins ),
-            #("nVtx" , nVtxBins),
-            ("pt_abseta", (ptBins, absetaBins)),
+varList =[  ("pt"   , ptBins  ),
+            ("eta"  , etaBins ),
+            ("nVtx" , nVtxBins),
+            #("pt_abseta", (ptBins, absetaBins)),
 ]
 
 ## json files
