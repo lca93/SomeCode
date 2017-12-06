@@ -5,6 +5,7 @@
 ##
 import ROOT, math
 import sys, os, subprocess
+import numpy as np
 
 ## propagate error on ratio
 ## (data error, mc error, data efficiency, mc efficiency)
@@ -26,7 +27,7 @@ ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = 1001;")
 
 ## some defs
 ptBin     = np.array([2., 2.5, 2.75, 3., 3.25, 3.5, 3.75, 4., 4.5, 5., 6., 8., 10., 15., 20., 30.])
-etaBin    = np.array([0, 0.9, 2.1, 2.4])
+etaBin    = np.array([0, 0.9, 1.2, 2.1, 2.4])
 
 ## path variables
 DIR  = "/afs/cern.ch/work/l/lguzzi/CMSSW_8_0_25/src/MuonAnalysis/all_together/Eff/2DPlots/" + str(sys.argv[1])
@@ -76,14 +77,24 @@ effHistoMC.GetZaxis().SetRangeUser(-.01, 1)
 effHistoMC.GetXaxis().SetTitle("pt [GeV]")
 effHistoMC.GetYaxis().SetTitle("abseta")
 
+## set data histo
+effHistoData.GetZaxis().SetRangeUser(-.01, 1)
+effHistoData.GetXaxis().SetTitle("pt [GeV]")
+effHistoData.GetYaxis().SetTitle("abseta")
+
+## set ratio histo
+ratHisto.GetZaxis().SetRangeUser(-.01, 1.2)
+ratHisto.GetXaxis().SetTitle("pt [GeV]")
+ratHisto.GetYaxis().SetTitle("abseta")
+
 ## set bin labels
-for i in range( len(ptBin)):
+for i in range( len(ptBin)-1):
     effHistoMC.GetXaxis().SetBinLabel(i+1, getBinRange(i, ptBin))
     effHistoData.GetXaxis().SetBinLabel(i+1, getBinRange(i, ptBin))
     ratHisto.GetXaxis().SetBinLabel(i+1, getBinRange(i, ptBin))
     ratHistoErr.GetXaxis().SetBinLabel(i+1, getBinRange(i, ptBin))
 
-for i in range( len(etaBin)):
+for i in range( len(etaBin)-1):
     effHistoMC.GetYaxis().SetBinLabel(i+1, getBinRange(i, etaBin))
     effHistoData.GetYaxis().SetBinLabel(i+1, getBinRange(i, etaBin))
     ratHisto.GetYaxis().SetBinLabel(i+1, getBinRange(i, etaBin))
