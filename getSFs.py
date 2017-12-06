@@ -2,7 +2,8 @@
 ## 5 Dec. 2017
 ## 
 ## the codes reads the root files created by the CMS TnP code
-## and calculates the SFs 1D from the efficiencies saved in those fils
+## and calculates the SFs 1D and 2D from the efficiencies saved 
+## in those files
 ##
 ## OUTPUT:
 ## -SFs json 
@@ -14,25 +15,16 @@ import ROOT
 import numpy as np
 import json
 
-from collections import OrderedDict
-from drawRatioPlot import PrintGraphs
+from collections    import OrderedDict
+from getSFs_libs    import getSFs_1D, getSFs_2D
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
 
-## get binning tags
-def getBinRange (i, bins):
-    return str(bins[i])+","+str(bins[i+1])
-
-## convert graph to histo and fill histogram of errors
-def GraphToHisto (graph, histo, histoE):
-    for i in range(graph.GetN()):
-        histo.Fill(graph.GetX()[i], graph.GetY()[i])
-        histoE.Fill(graph.GetX()[i], max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
-
 ## set up root
 ROOT.gStyle.SetOptStat(0)
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
+#ROOT.gROOT.SetBatch(ROOT.kTRUE)
+ROOT.gStyle.SetPaintTextFormat(".3f")
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = 1001;")
 ROOT.TH1.SetDefaultSumw2()
 
@@ -54,10 +46,12 @@ printGraphs = False if len(sys.argv)>2                  and\
 ptBins     = np.array([2., 2.5, 2.75, 3., 3.25, 3.5, 3.75, 4., 4.5, 5., 6., 8., 10., 15., 20., 30.])
 etaBins    = np.array([-2.4, -2.1, -1.6, -1.2, -0.9, -0.3, -0.2, 0.2, 0.3, 0.9, 1.2, 1.6, 2.1, 2.4])
 nVtxBins   = np.array([0.5,2.5,4.5,6.5,8.5,10.5,12.5,14.5,16.5,18.5,20.5,22.5,24.5,26.5,28.5,30.5,32.5,34.5,36.5,38.5,40.5,42.5,44.5,46.5,48.5,50.5])
+absetaBins = np.array([0, 0.9, 2.1, 2.4])
 
-varList =[  ("pt"   , ptBins  ),
+varList =[  #("pt"   , ptBins  ),
             #("eta"  , etaBins ),
             #("nVtx" , nVtxBins),
+            ("pt_abseta", (ptBins, absetaBins)),
 ]
 
 ## json files
@@ -78,56 +72,28 @@ def getSFs (var, bins):
     plotDirDA = fileDA.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
     plotDirMC = fileMC.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
 
-    ##get the graphs from the canvas inside the directories
-    ## NOTE works only with 1 canvas, i.e. 1D SFs
-    graphDA = plotDirDA.Get( plotDirDA.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
-    graphMC = plotDirMC.Get( plotDirMC.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
+    ## get the list of keys
+    keysMC = list(plotDirDA.GetListOfKeys())
+    keysDA = list(plotDirMC.GetListOfKeys())
+    if not len(keysDA) == len(keysMC): 
+        print "MC keys are different in number from Data keys for %s" % var
+        return
 
-    ## histos for SFs and errors
-    effHistoDA = ROOT.TH1F("hDA"  , "", len(bins)-1    , bins  )
-    errHistoDA = ROOT.TH1F("eDA"  , "", len(bins)-1    , bins  )
+    if len(keysDA) == 1:
+        print "getting 1D SFs for %s" % var
+        return  getSFs_1D( plotDirDA = plotDirDA     ,
+                           plotDirMC = plotDirMC     ,
+                           var       = var           ,
+                           bins      = bins          ,
+                           printGraphs = printGraphs ,
+                )
 
-    effHistoMC = ROOT.TH1F("hMC"  , "", len(bins)-1    , bins  )
-    errHistoMC = ROOT.TH1F("eMC"  , "", len(bins)-1    , bins  )
-
-    ## convert to histo
-    GraphToHisto(graphDA, effHistoDA, errHistoDA)
-    GraphToHisto(graphMC, effHistoMC, errHistoMC)
-
-    ## create a structure for the json
-    jStrucSF = {}
-    jStrucDA = {}
-    jStrucMC = {}
-
-    ## SFs list
-    SFs = [
-    ]
-
-    ## get the SFs and their uncertanties
-    for i in range(len(bins)-1):
-        num = unc.ufloat(effHistoDA.GetBinContent(i+1), errHistoDA.GetBinContent(i+1))
-        den = unc.ufloat(effHistoMC.GetBinContent(i+1), errHistoMC.GetBinContent(i+1))
-        sf  = num/den
-
-        SFs.append((sf, effHistoDA.GetXaxis().GetBinCenter(i+1)))
-
-        ## fill the json structures
-        jStrucSF[getBinRange(i, bins)] = {}
-        jStrucSF[getBinRange(i, bins)]['value'] = str(sf.nominal_value)   
-        jStrucSF[getBinRange(i, bins)]['error'] = str(sf.std_dev)   
-
-        jStrucDA[getBinRange(i, bins)] = {}
-        jStrucDA[getBinRange(i, bins)]['value'] = str(num.nominal_value)    
-        jStrucDA[getBinRange(i, bins)]['error'] = str(num.std_dev)  
-
-        jStrucMC[getBinRange(i, bins)] = {}
-        jStrucMC[getBinRange(i, bins)]['value'] = str(den.nominal_value)    
-        jStrucMC[getBinRange(i, bins)]['error'] = str(den.std_dev)  
- 
-    ## print the graphs
-    if printGraphs: PrintGraphs(graphDA, graphMC, SFs, var)
-
-    return jStrucSF, jStrucDA, jStrucMC
+    else:
+        print "getting 2D SFs for %s" % var
+        return  getSFs_2D( daDir = plotDirDA     ,
+                           mcDir = plotDirMC     , 
+                           bins  = bins          ,
+                )        
 
 ## <MAIN LOOP>
 for vv in varList:
