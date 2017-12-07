@@ -3,20 +3,16 @@ import sys, os
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
-from cfg_getSFs import RedefineXErrors
 
 def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False):
     ## define some ranges
-    binHighRange = sfList[-1][1] - sfList[-2][1]
     yRatioHigh = 1.1*max(sfList)[0].nominal_value if max(sfList)[0].nominal_value < 2.5 else 2.5
     yRatioLow  = 0.9*min(sfList)[0].nominal_value if min(sfList)[0].nominal_value > 0.0 else 0.5
+    yEffHigh = 1.3*max ( ROOT.TMath.MaxElement(daGraph.GetN(), daGraph.GetY()),
+                     ROOT.TMath.MaxElement(mcGraph.GetN(), mcGraph.GetY()))
+    yEffLow  = 0
     xLow  = sfList[0][1] - 0.05*(sfList[-1][1]-sfList[0][1])
     xHigh = sfList[-1][1]*1.1
-
-    ## clear outermost errors to set x range
-    if RedefineXErrors:
-        daGraph.SetPointEXhigh(daGraph.GetN()-1, binHighRange)
-        mcGraph.SetPointEXhigh(mcGraph.GetN()-1, binHighRange)
 
     ## create support histos
     supportEff = ROOT.TH1F("suppE", "", len(sfList), sfList[0][1], sfList[-1][1]*1.1)
@@ -36,8 +32,8 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
     multiG.SetTitle("SFs - %s muon ID; %s; efficiency" % (str(sys.argv[1]), varName))
     multiG.Add(daGraph)
     multiG.Add(mcGraph)
-    multiG.SetMinimum(0)
-    multiG.SetMaximum(1.1*max(sfList)[0].nominal_value)
+    multiG.SetMinimum(yEffLow)
+    multiG.SetMaximum(yEffHigh)
     mcGraph.SetLineColor(ROOT.kBlue)
     daGraph.SetLineColor(ROOT.kRed)
     mcGraph.SetMarkerStyle(20)
@@ -67,8 +63,21 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
     outCan = ROOT.TCanvas("outCan%s" % varName, "", 700, 1000)
     outCan.SetTitle("SFs for %s binning  -  %s muonID" %(varName, str(sys.argv[1])))
     outCan.Divide(1, 2)
-    import pdb ; pdb.set_trace()
+    ## set the pads
+    outCan.GetListOfPrimitives()[0].SetPad('effPad%s'   % varName, 'effPad'  , 0., 0.30, 1., 1., 0, 0)
+    outCan.GetListOfPrimitives()[1].SetPad('ratioPad%s' % varName, 'ratioPad', 0., 0.32, 1., .0, 0, 0)
+    outCan.GetListOfPrimitives()[0].SetLogx(logx)
+    outCan.GetListOfPrimitives()[1].SetLogx(logx)
+
+    outCan.GetListOfPrimitives()[0].SetGridy(True)
+    outCan.GetListOfPrimitives()[1].SetGridy(True)
+    outCan.GetListOfPrimitives()[0].SetGridx(True)
+    outCan.GetListOfPrimitives()[1].SetGridx(True)
+
+    outCan.GetListOfPrimitives()[0].SetBottomMargin(0.2)
+    outCan.GetListOfPrimitives()[1].SetBottomMargin(0.2)
     
+    ## draw the results
     outCan.cd(1)
     supportEff.Draw()
     multiG.Draw("same p")

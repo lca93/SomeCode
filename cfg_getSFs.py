@@ -18,8 +18,8 @@ varList =[  ("pt"   , ptBins  ),
 ]
 
 ##input files
-fileDA = ROOT.TFile.Open("../root_files/data/GH_data_%s.root" % str(sys.argv[1]))
-fileMC = ROOT.TFile.Open("../root_files/mc/GH_mc_%s.root"     % str(sys.argv[1]))
+fileDA = ROOT.TFile.Open("../root_files/data/data_%s.root" % str(sys.argv[1]))
+fileMC = ROOT.TFile.Open("../root_files/mc/mc_%s.root"     % str(sys.argv[1]))
 
 ## main directory
 MAINDIR = "./%s" % str(sys.argv[1])
@@ -27,8 +27,6 @@ MAINDIR = "./%s" % str(sys.argv[1])
 ## booleans
     ## use to plot pt with log on x
 useLogXforPt= False
-    ## use to redefine x errors for highest bin. Usefull when the last bin is huge
-RedefineXErrors = True
 
 def printConfig():
     print ('''
@@ -40,13 +38,11 @@ def printConfig():
         MC file \t\t {MCFILE}
         main directory \t\t {MDIR}
         useLogXforPt \t\t {LOGX}
-        RedefineXErrors \t {BINERROR}
 
         '''.format( VARLIST     =   list("%s" % varList[i][0] for i in range( len(varList))),
                     DATAFILE    =   fileDA.GetName() ,
                     MCFILE      =   fileMC.GetName() ,
                     MDIR        =   MAINDIR,
                     LOGX        =   useLogXforPt   ,
-                    BINERROR    =   RedefineXErrors,
             )
     )
