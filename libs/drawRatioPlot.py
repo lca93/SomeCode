@@ -64,29 +64,12 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
                                sfList[i][0].std_dev
         )
 
-    ## create the canvas and the pads
-    ## NOTE: delicate part: one shall not change the order of canvas/pads declaration and cd-ing to avoid ROOT crashes
-    supPad = ROOT.TPad('effPad%s' % varName, 'effPad', 0., 0.3, 1., 1., 0, 0)
-    supPad.SetGridy(True)
-    supPad.SetGridx(True)
-    supPad.SetBottomMargin(0.2)
-    supPad.SetLogx(logx)
-
-    infPad = ROOT.TPad('ratioPad%s' % varName, 'ratioPad', 0., 0.32, 1, .0, 0, 0)
-    infPad.SetGridx(True)
-    infPad.SetGridy(True)
-    infPad.SetBottomMargin(0.2)
-    infPad.SetLogx(logx)
-
     outCan = ROOT.TCanvas("outCan%s" % varName, "", 700, 1000)
     outCan.SetTitle("SFs for %s binning  -  %s muonID" %(varName, str(sys.argv[1])))
-    outCan.cd()
-    outCan.Draw()
-
-    ## draw on the eff. pad  
-    supPad.Draw()
-    supPad.cd()
+    outCan.Divide(1, 2)
+    import pdb ; pdb.set_trace()
     
+    outCan.cd(1)
     supportEff.Draw()
     multiG.Draw("same p")
     multiG.GetXaxis().SetLimits(xLow, xHigh)
@@ -95,10 +78,7 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
 
     
     ## draw on the ratio pad
-    outCan.cd()
-    infPad.Draw()
-    infPad.cd()
-    
+    outCan.cd(2)
     supportRat.Draw()
     sfGraph.Draw("PLE3")
     
