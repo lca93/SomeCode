@@ -38,6 +38,7 @@ def getSFs_1D(daDir, mcDir, bins, var):
     if not os.path.exists(DIR): os.makedirs(DIR)
 
     ## get the graphs from the canvas inside the directories
+
     graphDA = daDir.Get( daDir.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
     graphMC = mcDir.Get( mcDir.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
 

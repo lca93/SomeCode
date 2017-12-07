@@ -18,8 +18,8 @@ varList =[  ("pt"   , ptBins  ),
 ]
 
 ##input files
-fileDA = ROOT.TFile.Open("../root_files/data/data_%s.root" % str(sys.argv[1]))
-fileMC = ROOT.TFile.Open("../root_files/mc/mc_%s.root"     % str(sys.argv[1]))
+fileDA = ROOT.TFile.Open("../root_files/data/GH_data_%s.root" % str(sys.argv[1]))
+fileMC = ROOT.TFile.Open("../root_files/mc/GH_mc_%s.root"     % str(sys.argv[1]))
 
 ## main directory
 MAINDIR = "./%s" % str(sys.argv[1])

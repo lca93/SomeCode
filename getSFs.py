@@ -49,10 +49,24 @@ def getSFs (var, bins):
     plotDirDA = fileDA.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
     plotDirMC = fileMC.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
 
-    ## get the list of keys
-    keys = list(plotDirMC.GetListOfKeys())
+    ## check if directories exist
+    #try:
+    #  plotDirDA.GetName()
+    #  plotDirMC.GetName()
+    #except:
+    #  print ">>%s skipped: no directory found in root file" % var
+    #  return -1
 
-    if len(keys) == 1:
+    ## get the list of keys
+    ## check if directory exists, otherwise exit
+    try:
+      keysMC = list(plotDirMC.GetListOfKeys())
+      keysDA = list(plotDirDA.GetListOfKeys())
+    except:
+      print ">>skipping %s: directory not found" % var
+      return -1
+
+    if len(keysMC) == 1:
         print "getting 1D SFs for %s" % var
         return  getSFs_1D( daDir = plotDirDA     ,
                            mcDir = plotDirMC     ,
@@ -73,9 +87,10 @@ printConfig()
 
 for vv in varList:
     struc = getSFs(vv[0], vv[1])
-    jsonStrucSF[mainKey][vv[0]] = struc[0]
-    jsonStrucDA[mainKey][vv[0]] = struc[1]
-    jsonStrucMC[mainKey][vv[0]] = struc[2]
+    if struc != -1:
+      jsonStrucSF[mainKey][vv[0]] = struc[0]
+      jsonStrucDA[mainKey][vv[0]] = struc[1]
+      jsonStrucMC[mainKey][vv[0]] = struc[2]
 
 ##create the json object
 jsonObjSF = json.dumps(jsonStrucSF, indent=4, sort_keys=False)
