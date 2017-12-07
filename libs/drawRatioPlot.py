@@ -59,27 +59,26 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
                                sfList[i][0].std_dev
         )
 
-    ## create the canvas
-    outCan = ROOT.TCanvas("outCan%s" % varName, "", 700, 1000)
-    outCan.SetTitle("SFs for %s binning  -  %s muonID" %(varName, str(sys.argv[1])))
-    outCan.Draw()
-
-    ## create the eff. pads
-    supPad = ROOT.TPad('effPad', 'effPad', 0., 0.3, 1., 1., 0, 0)
+    ## create the canvas and the pads
+    ## NOTE: delicate part: one shall not change the order of canvas/pads declaration and cd-ing to avoid ROOT crashes
+    supPad = ROOT.TPad('effPad%s' % varName, 'effPad', 0., 0.3, 1., 1., 0, 0)
     supPad.SetGridy(True)
     supPad.SetGridx(True)
     supPad.SetBottomMargin(0.2)
     supPad.SetLogx(logx)
 
-    ## create the ratio pad
-    infPad = ROOT.TPad('ratioPad', 'ratioPad', 0., 0.32, 1, .0, 0, 0)
+    infPad = ROOT.TPad('ratioPad%s' % varName, 'ratioPad', 0., 0.32, 1, .0, 0, 0)
     infPad.SetGridx(True)
     infPad.SetGridy(True)
     infPad.SetBottomMargin(0.2)
     infPad.SetLogx(logx)
 
-    ## draw on the eff. pad  
+    outCan = ROOT.TCanvas("outCan%s" % varName, "", 700, 1000)
+    outCan.SetTitle("SFs for %s binning  -  %s muonID" %(varName, str(sys.argv[1])))
     outCan.cd()
+    outCan.Draw()
+
+    ## draw on the eff. pad  
     supPad.Draw()
     supPad.cd()
     

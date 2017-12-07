@@ -10,9 +10,9 @@ nVtxBins   = np.array([0.5,2.5,4.5,6.5,8.5,10.5,12.5,14.5,16.5,18.5,20.5,22.5,24
 absetaBins = np.array([0, 0.9, 1.2, 2.1, 2.4])
 
 ## varuables
-varList =[  #("pt"   , ptBins  ),
-            #("eta"  , etaBins ),
-            #("nVtx" , nVtxBins),
+varList =[  ("pt"   , ptBins  ),
+            ("eta"  , etaBins ),
+            ("nVtx" , nVtxBins),
             ("pt_abseta", (ptBins, absetaBins)),
 ]
 
@@ -24,6 +24,4 @@ fileMC = ROOT.TFile.Open("../root_files/mc/mc_%s.root"     % str(sys.argv[1]))
 MAINDIR = "./%s" % str(sys.argv[1])
 
 ## booleans
-    ## separate json and graphs for 2D only to aoid an unknown crash
-printGraphs = False
-useLogXforPt= True
+useLogXforPt= False

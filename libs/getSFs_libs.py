@@ -31,7 +31,7 @@ def GraphToHisto (graph, histo, histoE):
         histoE.Fill(graph.GetX()[i], max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
 
 ## calculate 1D SFs
-def getSFs_1D(daDir, mcDir, bins, var, printGraphs = True):
+def getSFs_1D(daDir, mcDir, bins, var):
     logx = useLogXforPt if var == "pt" else False
     ## make the dir
     DIR = MAINDIR+"/%s" % var
@@ -83,17 +83,17 @@ def getSFs_1D(daDir, mcDir, bins, var, printGraphs = True):
         jStrucMC[getBinRange(i, bins)]['error'] = str(den.std_dev)  
  
     ## print the graphs
-    if printGraphs: 
-        printRatioGraphs( daGraph = graphDA, 
-                          mcGraph = graphMC, 
-                          sfList  = SFs    , 
-                          varName = var    ,
-                          printDir=DIR     ,
-        )
+    printRatioGraphs( daGraph = graphDA, 
+                      mcGraph = graphMC, 
+                      sfList  = SFs    , 
+                      varName = var    ,
+                      printDir= DIR    ,
+                      logx    = logx   ,
+    )
 
     return jStrucSF, jStrucDA, jStrucMC
 
-def getSFs_2D(daDir, mcDir, bins, var, printGraphs = True):
+def getSFs_2D(daDir, mcDir, bins, var):
     logx = useLogXforPt
     ## make the dir
     DIR = MAINDIR+"/%s" % var
@@ -173,30 +173,26 @@ def getSFs_2D(daDir, mcDir, bins, var, printGraphs = True):
             mcEHisto.SetBinError(j+1, i+1, den.std_dev)
         ## print the graphs
         label = "|#eta| in (%s)   -   pT [GeV]"  % str(getBinLabel(i, absetaBins))
-        if printGraphs:
-            printRatioGraphs( daGraph = couple[0], 
-                              mcGraph = couple[1], 
-                              sfList  = SFs   , 
-                              varName = label ,
-                              printDir= DIR   ,
-                              logx    = logx  ,
-            )
-        ## btpass crash TOBEFIXED
-    if printGraphs:
-        c1 = ROOT.TCanvas()
-        c2 = ROOT.TCanvas()
-        c3 = ROOT.TCanvas()
+        printRatioGraphs( daGraph = couple[0], 
+                          mcGraph = couple[1], 
+                          sfList  = SFs   , 
+                          varName = label ,
+                          printDir= DIR   ,
+                          logx    = logx  ,
+        )
+        
+    ## print the 2D histos
+    c1 = ROOT.TCanvas()
+    c2 = ROOT.TCanvas()
+    c3 = ROOT.TCanvas()
 
-        c1.cd() ; SFsHisto.Draw("colz2 text error")
-        c2.cd() ; daEHisto.Draw("colz2 text error")
-        c3.cd() ; mcEHisto.Draw("colz2 text error")
+    c1.cd() ; SFsHisto.Draw("colz2 text error")
+    c2.cd() ; daEHisto.Draw("colz2 text error")
+    c3.cd() ; mcEHisto.Draw("colz2 text error")
 
-        c1.Print("%s/Ratio_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
-        c2.Print("%s/DataEff_%s.pdf"  % (DIR, str(sys.argv[1])), "pdf")
-        c3.Print("%s/MCEff_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
-
-
-    if printGraphs: return {},{},{}
+    c1.Print("%s/Ratio_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
+    c2.Print("%s/DataEff_%s.pdf"  % (DIR, str(sys.argv[1])), "pdf")
+    c3.Print("%s/MCEff_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
 
     ## create the Json structures
     jsonStrucSF = {}
