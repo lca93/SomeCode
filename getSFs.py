@@ -14,7 +14,7 @@ import json
 
 from collections        import OrderedDict
 from libs.getSFs_libs   import getSFs_1D, getSFs_2D
-from cfg_getSFs         import varList, fileDA, fileMC, MAINDIR
+from cfg_getSFs         import varList, fileDA, fileMC, MAINDIR, printConfig
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
@@ -69,6 +69,8 @@ def getSFs (var, bins):
                 )        
 
 ## <MAIN LOOP>
+printConfig()
+
 for vv in varList:
     struc = getSFs(vv[0], vv[1])
     jsonStrucSF[mainKey][vv[0]] = struc[0]

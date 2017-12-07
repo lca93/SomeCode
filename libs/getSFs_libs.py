@@ -16,12 +16,12 @@ import uncertainties as unc
 
 ## get binning tags
 def getBinRange (i, bins):
-    down   =  str(bins[i])
-    up =  str(bins[i+1]) if (bins[i+1]) != 30. else "1200"
+    down =  str(bins[i])
+    up   =  str(bins[i+1]) if (bins[i+1]) != 30.1234 else "1200"
     return down+","+up
 def getBinLabel (i, bins):
-    down   =  str(bins[i])
-    up =  str(bins[i+1]) if (bins[i+1]) != 30. else "1200"
+    down =  str(bins[i])
+    up   =  str(bins[i+1]) if (bins[i+1]) != 30.1234 else "1200"
     return down+"-"+up
 
 ## convert graph to histo and fill histogram of errors
@@ -133,6 +133,11 @@ def getSFs_2D(daDir, mcDir, bins, var):
     daEHisto.GetYaxis().SetTitle("abseta")
     mcEHisto.GetXaxis().SetTitle("pt [GeV]")
     mcEHisto.GetYaxis().SetTitle("abseta")
+
+    SFsHisto.GetXaxis().SetTitleOffset( 1.3*SFsHisto.GetTitleOffset())
+    daEHisto.GetXaxis().SetTitleOffset( 1.3*daEHisto.GetTitleOffset())
+    mcEHisto.GetXaxis().SetTitleOffset( 1.3*mcEHisto.GetTitleOffset())
+
 
     ## set the labels 
     for i in range( (len(absetaBins)-1)):
