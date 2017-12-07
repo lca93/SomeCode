@@ -7,6 +7,7 @@ import ROOT, math
 import sys, os, subprocess
 import numpy as np
 
+
 ## propagate error on ratio
 ## (data error, mc error, data efficiency, mc efficiency)
 def ErrorRatio(eDat, eMC, effData, effMC):
@@ -28,6 +29,7 @@ ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = 1001;")
 ## some defs
 ptBin     = np.array([2., 2.5, 2.75, 3., 3.25, 3.5, 3.75, 4., 4.5, 5., 6., 8., 10., 15., 20., 30.])
 etaBin    = np.array([0, 0.9, 1.2, 2.1, 2.4])
+
 
 ## path variables
 DIR  = "/afs/cern.ch/work/l/lguzzi/CMSSW_8_0_25/src/MuonAnalysis/all_together/Eff/2DPlots/" + str(sys.argv[1])
