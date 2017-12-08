@@ -24,6 +24,9 @@ fileMC = ROOT.TFile.Open("../root_files/mc/mc_%s.root"     % str(sys.argv[1]))
 ## main directory
 MAINDIR = "./%s" % str(sys.argv[1])
 
+## ID type
+ID_type = str(sys.argv[1])+"_muonID"
+
 ## booleans
     ## use to plot pt with log on x
 useLogXforPt= False
@@ -38,11 +41,13 @@ def printConfig():
         MC file \t\t {MCFILE}
         main directory \t\t {MDIR}
         useLogXforPt \t\t {LOGX}
+        ID type \t\t {IDTYPE}
 
         '''.format( VARLIST     =   list("%s" % varList[i][0] for i in range( len(varList))),
                     DATAFILE    =   fileDA.GetName() ,
                     MCFILE      =   fileMC.GetName() ,
-                    MDIR        =   MAINDIR,
-                    LOGX        =   useLogXforPt   ,
+                    MDIR        =   MAINDIR          ,
+                    LOGX        =   useLogXforPt     ,
+                    IDTYPE      =   ID_type          ,
             )
     )

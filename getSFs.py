@@ -14,7 +14,7 @@ import json
 
 from collections        import OrderedDict
 from libs.getSFs_libs   import getSFs_1D, getSFs_2D
-from cfg_getSFs         import varList, fileDA, fileMC, MAINDIR, printConfig
+from cfg.cfg_getSFs     import varList, fileDA, fileMC, MAINDIR, printConfig, ID_type
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
@@ -26,7 +26,7 @@ ROOT.gStyle.SetPaintTextFormat(".3f")
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
 ## some variables
-mainKey = str(sys.argv[1])
+mainKey = ID_type
 
 ## create the main directory
 if not os.path.exists(MAINDIR): os.makedirs(MAINDIR)
@@ -48,14 +48,6 @@ def getSFs (var, bins):
     ## directory containing the efficiency plots
     plotDirDA = fileDA.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
     plotDirMC = fileMC.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
-
-    ## check if directories exist
-    #try:
-    #  plotDirDA.GetName()
-    #  plotDirMC.GetName()
-    #except:
-    #  print ">>%s skipped: no directory found in root file" % var
-    #  return -1
 
     ## get the list of keys
     ## check if directory exists, otherwise exit
@@ -101,3 +93,7 @@ jsonObjMC = json.dumps(jsonStrucMC, indent=4, sort_keys=False)
 jsonFileSF.write(jsonObjSF)
 jsonFileDA.write(jsonObjDA)
 jsonFileMC.write(jsonObjMC)
+
+jsonFileSF.close()
+jsonFileDA.close()
+jsonFileMC.close()

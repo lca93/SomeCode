@@ -8,7 +8,7 @@ import json
 from collections    import OrderedDict
 from itertools      import product
 from libs.drawRatioPlot  import printRatioGraphs
-from cfg_getSFs     import MAINDIR, useLogXforPt
+from cfg.cfg_getSFs import MAINDIR, useLogXforPt
 
 
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
@@ -54,9 +54,9 @@ def getSFs_1D(daDir, mcDir, bins, var):
     GraphToHisto(graphMC, effHistoMC, errHistoMC)
 
     ## create a structure for the json
-    jStrucSF = {}
-    jStrucDA = {}
-    jStrucMC = {}
+    jStrucSF = OrderedDict()
+    jStrucDA = OrderedDict()
+    jStrucMC = OrderedDict()
 
     ## SFs list
     SFs = [
@@ -72,16 +72,16 @@ def getSFs_1D(daDir, mcDir, bins, var):
 
         ## fill the json structures
         jStrucSF[getBinRange(i, bins)] = {}
-        jStrucSF[getBinRange(i, bins)]['value'] = str(sf.nominal_value)   
-        jStrucSF[getBinRange(i, bins)]['error'] = str(sf.std_dev)   
+        jStrucSF[getBinRange(i, bins)]['value'] = sf.nominal_value  if sf.nominal_value != 0    else None
+        jStrucSF[getBinRange(i, bins)]['error'] = sf.std_dev        if sf.std_dev != 0          else None
 
         jStrucDA[getBinRange(i, bins)] = {}
-        jStrucDA[getBinRange(i, bins)]['value'] = str(num.nominal_value)    
-        jStrucDA[getBinRange(i, bins)]['error'] = str(num.std_dev)  
+        jStrucDA[getBinRange(i, bins)]['value'] = num.nominal_value if num.nominal_value != 0   else None
+        jStrucDA[getBinRange(i, bins)]['error'] = num.std_dev       if num.std_dev != 0         else None
 
         jStrucMC[getBinRange(i, bins)] = {}
-        jStrucMC[getBinRange(i, bins)]['value'] = str(den.nominal_value)    
-        jStrucMC[getBinRange(i, bins)]['error'] = str(den.std_dev)  
+        jStrucMC[getBinRange(i, bins)]['value'] = den.nominal_value if den.nominal_value != 0   else None
+        jStrucMC[getBinRange(i, bins)]['error'] = den.std_dev       if den.std_dev != 0         else None
  
     ## print the graphs
     printRatioGraphs( daGraph = graphDA, 
@@ -201,26 +201,26 @@ def getSFs_2D(daDir, mcDir, bins, var):
     c3.Print("%s/MCEff_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
 
     ## create the Json structures
-    jsonStrucSF = {}
-    jsonStrucMC = {}
-    jsonStrucDA = {}
+    jsonStrucSF = OrderedDict()
+    jsonStrucMC = OrderedDict()
+    jsonStrucDA = OrderedDict()
 
     ## fill the structures
     for i in range( len(absetaBins)-1):
-       jsonStrucSF[getBinRange(i, absetaBins)] = {}
-       jsonStrucMC[getBinRange(i, absetaBins)] = {}
-       jsonStrucDA[getBinRange(i, absetaBins)] = {}
+       jsonStrucSF[getBinRange(i, absetaBins)] = OrderedDict()
+       jsonStrucMC[getBinRange(i, absetaBins)] = OrderedDict()
+       jsonStrucDA[getBinRange(i, absetaBins)] = OrderedDict()
        for j in range( len(ptBins)-1):
            jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
            jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
            jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)] = {}
 
-           jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = SFsHisto.GetBinContent(j+1, i+1)
-           jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = mcEHisto.GetBinContent(j+1, i+1)
-           jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = daEHisto.GetBinContent(j+1, i+1)
+           jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = SFsHisto.GetBinContent(j+1, i+1)  if SFsHisto.GetBinContent(j+1, i+1) != 0 else None
+           jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = mcEHisto.GetBinContent(j+1, i+1)  if mcEHisto.GetBinContent(j+1, i+1) != 0 else None
+           jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['value'] = daEHisto.GetBinContent(j+1, i+1)  if daEHisto.GetBinContent(j+1, i+1) != 0 else None
 
-           jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = SFsHisto.GetBinError(j+1, i+1)
-           jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = mcEHisto.GetBinError(j+1, i+1)
-           jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = daEHisto.GetBinError(j+1, i+1)
+           jsonStrucSF[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = SFsHisto.GetBinError(j+1, i+1) if SFsHisto.GetBinError(j+1, i+1) != 0 else None
+           jsonStrucMC[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = mcEHisto.GetBinError(j+1, i+1) if mcEHisto.GetBinError(j+1, i+1) != 0 else None
+           jsonStrucDA[getBinRange(i, absetaBins)][getBinRange(j, ptBins)]['error'] = daEHisto.GetBinError(j+1, i+1) if daEHisto.GetBinError(j+1, i+1) != 0 else None
 
     return jsonStrucSF, jsonStrucDA, jsonStrucMC
