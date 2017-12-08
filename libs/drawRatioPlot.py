@@ -90,8 +90,9 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
     outCan.cd(2)
     supportRat.Draw()
     sfGraph.Draw("PLE3")
-    
     ##print 
     outCan.Print("%s/SFs_%s_%s.pdf" % (printDir, varName, str(sys.argv[1])), "pdf")
+    ## wirte on file
+    outCan.Write()
 
     return 

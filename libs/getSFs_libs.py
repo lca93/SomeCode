@@ -196,9 +196,9 @@ def getSFs_2D(daDir, mcDir, bins, var):
     c2.cd() ; daEHisto.Draw("colz2 text error")
     c3.cd() ; mcEHisto.Draw("colz2 text error")
 
-    c1.Print("%s/Ratio_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
-    c2.Print("%s/DataEff_%s.pdf"  % (DIR, str(sys.argv[1])), "pdf")
-    c3.Print("%s/MCEff_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf")
+    c1.Print("%s/Ratio_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf") ; c1.Write()
+    c2.Print("%s/DataEff_%s.pdf"  % (DIR, str(sys.argv[1])), "pdf") ; c2.Write()
+    c3.Print("%s/MCEff_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf") ; c3.Write()
 
     ## create the Json structures
     jsonStrucSF = OrderedDict()

@@ -1,10 +1,42 @@
 #######################################################################
-## 5 Dec. 2017
 ## 
-## the codes reads the root files created by the CMS TnP code
-## and calculates the SFs 1D and 2D from the efficiencies saved 
-## in those files
+## The code reads the TnP output root files and extract the SFs and
+## their error (as propagation of the bigget uncertanty between upper
+## and lower error).
+## Plots are saved for efficiencies and their ratio.
 ##
+## The code work with 1D and 2D SFs. Configurations are set in 
+## 'cfg/cfg_getSFs.py'.
+##
+## SFs are obtained from the TGraphs of the TnP files and not from 
+## fitresults; this way it is easies to extract the pltos
+##
+## The SFs, and data and MC efficiencies are saved in a json file
+## The plots are saved in a root file
+## NOTE: for 0 SFs/efficiencies or 0 errors a value 'null' 
+## is filled instead
+##
+## NOTE: ROOT may crash sometimes, try to run again or see the results:
+## it may have succeded anyway
+##
+## JSON STRUCTURE:
+## <ID tested>
+## |
+## ---> <variable1>
+## |    |
+## |    ---> <bin1>
+## |    |    |
+## |    |    ---> <value>
+## |    |    ---> <error>
+## |    ---> <bin2>
+## |         |
+## |         ---> <value>
+## |         ---> <error>
+## |
+## ---> <variable2>
+##      |
+##      ---> <bin1>
+## [etc]
 
 import sys, os
 import ROOT
@@ -19,6 +51,8 @@ from cfg.cfg_getSFs     import varList, fileDA, fileMC, MAINDIR, printConfig, ID
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
 
+global outFile
+
 ## set up root
 ROOT.gStyle.SetOptStat(0)
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
@@ -27,6 +61,9 @@ ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
 ## some variables
 mainKey = ID_type
+
+## root output file
+outFile = ROOT.TFile("%s/%s.root" % (MAINDIR, ID_type), "RECREATE")
 
 ## create the main directory
 if not os.path.exists(MAINDIR): os.makedirs(MAINDIR)
@@ -45,6 +82,9 @@ jsonStrucDA[mainKey] = OrderedDict()
 jsonStrucMC[mainKey] = OrderedDict()
 
 def getSFs (var, bins):
+    outFile.cd()
+    outFile.mkdir(var)
+    outFile.cd(var)
     ## directory containing the efficiency plots
     plotDirDA = fileDA.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
     plotDirMC = fileMC.GetDirectory("tpTree/eff_%s/fit_eff_plots" % var)
@@ -97,3 +137,5 @@ jsonFileMC.write(jsonObjMC)
 jsonFileSF.close()
 jsonFileDA.close()
 jsonFileMC.close()
+
+outFile.Close()
