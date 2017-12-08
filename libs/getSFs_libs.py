@@ -31,7 +31,7 @@ def GraphToHisto (graph, histo, histoE):
         histoE.Fill(graph.GetX()[i], max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
 
 ## calculate 1D SFs
-def getSFs_1D(daDir, mcDir, bins, var):
+def getSFs_1D(daDir, mcDir, bins, var, outFile):
     logx = useLogXforPt if var == "pt" else False
     ## make the dir
     DIR = MAINDIR+"/%s" % var
@@ -94,7 +94,7 @@ def getSFs_1D(daDir, mcDir, bins, var):
 
     return jStrucSF, jStrucDA, jStrucMC
 
-def getSFs_2D(daDir, mcDir, bins, var):
+def getSFs_2D(daDir, mcDir, bins, var, outFile):
     logx = useLogXforPt
     ## make the dir
     DIR = MAINDIR+"/%s" % var

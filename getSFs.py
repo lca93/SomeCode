@@ -51,8 +51,6 @@ from cfg.cfg_getSFs     import varList, fileDA, fileMC, MAINDIR, printConfig, ID
 sys.path.insert(0, os.environ['HOME'] + '/.local/lib/python2.6/site-packages')
 import uncertainties as unc
 
-global outFile
-
 ## set up root
 ROOT.gStyle.SetOptStat(0)
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
@@ -81,7 +79,7 @@ jsonStrucSF[mainKey] = OrderedDict()
 jsonStrucDA[mainKey] = OrderedDict()
 jsonStrucMC[mainKey] = OrderedDict()
 
-def getSFs (var, bins):
+def getSFs (var, bins, outFile):
     outFile.cd()
     outFile.mkdir(var)
     outFile.cd(var)
@@ -104,6 +102,7 @@ def getSFs (var, bins):
                            mcDir = plotDirMC     ,
                            var       = var       ,
                            bins      = bins      ,
+                           outFile = outFile     ,
                 )
 
     else:
@@ -112,13 +111,14 @@ def getSFs (var, bins):
                            mcDir = plotDirMC     , 
                            var   = var           ,
                            bins  = bins          ,
+                           outFile = outFile     ,
                 )        
 
 ## <MAIN LOOP>
 printConfig()
 
 for vv in varList:
-    struc = getSFs(vv[0], vv[1])
+    struc = getSFs(vv[0], vv[1], outFile)
     if struc != -1:
       jsonStrucSF[mainKey][vv[0]] = struc[0]
       jsonStrucDA[mainKey][vv[0]] = struc[1]
