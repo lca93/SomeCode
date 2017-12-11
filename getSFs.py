@@ -56,6 +56,7 @@ ROOT.gStyle.SetOptStat(0)
 ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.gStyle.SetPaintTextFormat(".3f")
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
+ROOT.TH1.SetDefaultSumw2()
 
 ## some variables
 mainKey = ID_type

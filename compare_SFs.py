@@ -60,8 +60,8 @@ def compare1D (key1, key2, varName, bins, outFile, etaRange = ""):
     multiG2.Add(SFgraph1)
     multiG2.Add(SFgraph2)
 
-    multiG1.SetTitle("SFs comparison  %s %s; %s; efficiency" % (varName, etaRange, varName))
-    multiG1.SetTitle("SFs comparison  %s %s; %s; SF"         % (varName, etaRange, varName))
+    multiG1.SetTitle("SFs comparison  %s %s; %s; efficiency" % (muonID, etaRange, varName))
+    multiG2.SetTitle("SFs comparison  %s %s; %s; SF"         % (muonID, etaRange, varName))
     ## set the graphs
     DAgraph1.SetMarkerStyle(22)
     MCgraph1.SetMarkerStyle(20)
@@ -95,7 +95,7 @@ def compare1D (key1, key2, varName, bins, outFile, etaRange = ""):
 
     ##set the canvas
     outCan = ROOT.TCanvas("outCan", "SFs comparison %s %s  -  %s muonID" % (varName, etaRange, muonID))
-    outCan.Divide(1, 2)
+    outCan.Divide(1, 3)
     outCan.GetListOfPrimitives()[0].SetPad('effPad%s'   % varName, 'effPad'  , 0., 0.30, 1., 1., 0, 0)
     outCan.GetListOfPrimitives()[1].SetPad('ratioPad%s' % varName, 'ratioPad', 0., 0.32, 1., .0, 0, 0)
     outCan.GetListOfPrimitives()[0].SetLogx(logx)
@@ -116,6 +116,11 @@ def compare1D (key1, key2, varName, bins, outFile, etaRange = ""):
     leg.AddEntry(MCgraph1, "BCDEF MC", "lp")
     leg.AddEntry(MCgraph2, "GH MC", "lp")
 
+    leg2 = ROOT.TLegend(0.7, 0.5, 0.85, 0.25)
+    leg2.AddEntry(SFgraph1, "BCDEF SFs", "lp")
+    leg2.AddEntry(SFgraph2, "GH SFs", "lp")
+
+
     ## print on same canvas
     outCan.cd(1)
     supportEff.Draw()
@@ -126,6 +131,8 @@ def compare1D (key1, key2, varName, bins, outFile, etaRange = ""):
     outCan.cd(2)
     supportRat.Draw()
     multiG2.Draw("same PLE3")
+    leg2.Draw("same")
+    multiG2.GetYaxis().SetRangeUser(0.5, 1.2)
     multiG2.GetXaxis().SetLimits(bins[0]-0.2*abs(bins[0]), 1.1*bins[-1])
 
     outCan.Update()
@@ -192,7 +199,7 @@ for var in varList:
     try:
         keys1 = file1.GetDirectory(var[0]).GetListOfKeys()
         keys2 = file2.GetDirectory(var[0]).GetListOfKeys()
-    except: continue
+    except: continue    
     ##mkdirs
     if not os.path.exists(MAINDIR+"/"+var[0]): os.makedirs(MAINDIR+"/"+var[0])
     outFile.cd()
