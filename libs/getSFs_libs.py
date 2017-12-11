@@ -25,10 +25,25 @@ def getBinLabel (i, bins):
     return down+"-"+up
 
 ## convert graph to histo and fill histogram of errors
-def GraphToHisto (graph, histo, histoE):
+def GraphToHisto (graph, bins):
+    histo = ROOT.TH1F("h"  , "", len(bins)-1    , bins  )
     for i in range(graph.GetN()):
         histo.Fill(graph.GetX()[i], graph.GetY()[i])
-        histoE.Fill(graph.GetX()[i], max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
+        histo.SetBinError( histo.FindBin( graph.GetX()[i]), max(graph.GetErrorYhigh(i), graph.GetErrorYlow(i)))
+    return histo
+
+def HistoToGraph(histo):
+    graph = ROOT.TGraphErrors()
+    for i in range( histo.GetSize()-2):
+        graph.SetPoint( i, 
+                        histo.GetBinCenter(i+1),
+                        histo.GetBinContent(i+1)
+        )
+        graph.SetPointError( i,
+                             0,
+                             histo.GetBinError(i+1)
+        )
+    return graph
 
 ## calculate 1D SFs
 def getSFs_1D(daDir, mcDir, bins, var, outFile):
@@ -42,16 +57,9 @@ def getSFs_1D(daDir, mcDir, bins, var, outFile):
     graphDA = daDir.Get( daDir.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
     graphMC = mcDir.Get( mcDir.GetListOfKeys()[0].GetName() ).GetPrimitive('hxy_fit_eff')
 
-    ## histos for SFs and errors
-    effHistoDA = ROOT.TH1F("hDA"  , "", len(bins)-1    , bins  )
-    errHistoDA = ROOT.TH1F("eDA"  , "", len(bins)-1    , bins  )
-
-    effHistoMC = ROOT.TH1F("hMC"  , "", len(bins)-1    , bins  )
-    errHistoMC = ROOT.TH1F("eMC"  , "", len(bins)-1    , bins  )
-
     ## convert to histo
-    GraphToHisto(graphDA, effHistoDA, errHistoDA)
-    GraphToHisto(graphMC, effHistoMC, errHistoMC)
+    effHistoDA = GraphToHisto(graphDA, bins)
+    effHistoMC = GraphToHisto(graphMC, bins)
 
     ## create a structure for the json
     jStrucSF = OrderedDict()
@@ -64,8 +72,8 @@ def getSFs_1D(daDir, mcDir, bins, var, outFile):
 
     ## get the SFs and their uncertanties
     for i in range(len(bins)-1):
-        num = unc.ufloat(effHistoDA.GetBinContent(i+1), errHistoDA.GetBinContent(i+1))
-        den = unc.ufloat(effHistoMC.GetBinContent(i+1), errHistoMC.GetBinContent(i+1))
+        num = unc.ufloat(effHistoDA.GetBinContent(i+1), effHistoDA.GetBinError(i+1))
+        den = unc.ufloat(effHistoMC.GetBinContent(i+1), effHistoMC.GetBinError(i+1))
         sf  = num/den if den.nominal_value != 0 else unc.ufloat(0, 0)
 
         SFs.append((sf, effHistoDA.GetXaxis().GetBinCenter(i+1)))
@@ -151,21 +159,15 @@ def getSFs_2D(daDir, mcDir, bins, var, outFile):
         mcEHisto.GetXaxis().SetBinLabel(i+1, getBinLabel(i, ptBins))
 
     for i, couple in enumerate(ptGraphList):
-        ## define some auxiliary TH1 INSIDE to force a bin reset
-        ## otherwise ROOT gets crazy
-        daEffH = ROOT.TH1F("effDA", "", len(ptBins)-1, ptBins)
-        mcEffH = ROOT.TH1F("effMC", "", len(ptBins)-1, ptBins)    
-        EdaEffH = ROOT.TH1F("ErreffDA", "", len(ptBins)-1, ptBins)
-        EmcEffH = ROOT.TH1F("ErreffMC", "", len(ptBins)-1, ptBins)
         ## convert the graphs
-        GraphToHisto(couple[0], daEffH, EdaEffH)
-        GraphToHisto(couple[1], mcEffH, EmcEffH)
+        daEffH = GraphToHisto(couple[0], ptBins)
+        mcEffH = GraphToHisto(couple[1], ptBins)
         ## get the SFs
         SFs = [
         ]
         for j in range( len(ptBins)-1):
-            num = unc.ufloat(daEffH.GetBinContent(j+1), EdaEffH.GetBinContent(j+1))
-            den = unc.ufloat(mcEffH.GetBinContent(j+1), EmcEffH.GetBinContent(j+1))
+            num = unc.ufloat(daEffH.GetBinContent(j+1), daEffH.GetBinError(j+1))
+            den = unc.ufloat(mcEffH.GetBinContent(j+1), mcEffH.GetBinError(j+1))
             sf  = num/den if den.nominal_value != 0 else unc.ufloat(0, 0)
             SFs.append((sf, daEffH.GetXaxis().GetBinCenter(j+1)))
 

@@ -9,7 +9,7 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
     yRatioHigh = 1.1*max(sfList)[0].nominal_value if max(sfList)[0].nominal_value < 2.5 else 2.5
     yRatioLow  = 0.9*min(sfList)[0].nominal_value if min(sfList)[0].nominal_value > 0.0 else 0.5
     yEffHigh = 1.3*max ( ROOT.TMath.MaxElement(daGraph.GetN(), daGraph.GetY()),
-                     ROOT.TMath.MaxElement(mcGraph.GetN(), mcGraph.GetY()))
+                         ROOT.TMath.MaxElement(mcGraph.GetN(), mcGraph.GetY()))
     yEffLow  = 0
     xLow  = sfList[0][1] - 0.05*(sfList[-1][1]-sfList[0][1])
     xHigh = sfList[-1][1]*1.1
