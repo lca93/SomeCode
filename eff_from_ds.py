@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 ROOT.gStyle.SetOptFit(1111)
 ROOT.gStyle.SetOptStat(1000000001)
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
+#ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
@@ -41,14 +41,14 @@ def getBinRange (i, bins, sep = ','):
     return down+sep+up
 
 def SetParameters(fitFunc, setName = False):
-    fitFunc.SetParameter(0, 2000.) ; fitFunc.SetParLimits(0, 0, 10000)    ## norm gaus1
-    fitFunc.SetParameter(1, 1.97 ) ; fitFunc.SetParLimits(1, 1.93, 2.0)   ## mean gaus1
-    fitFunc.SetParameter(2, 0.005 ) ; fitFunc.SetParLimits(2, 0, 0.02)     ## sigm gaus1
-    fitFunc.SetParameter(3, 1000.) ; fitFunc.SetParLimits(3, 0, 10000)    ## norm gaus2
-    fitFunc.SetParameter(4, 1.87 ) ; fitFunc.SetParLimits(4, 1.83, 1.9)   ## mean gaus2
-    fitFunc.SetParameter(5, 0.005 ) ; fitFunc.SetParLimits(5, 0, 0.02)     ## sigm gaus2
-    fitFunc.SetParameter(6, 500. ) ; fitFunc.SetParLimits(6, 0, 2000)     ## norm pol1
-    fitFunc.SetParameter(7, -1000) ; fitFunc.SetParLimits(7, -5000, 5000) ## ang. pol1
+    fitFunc.SetParameter(0, 2000.)  ; fitFunc.SetParLimits(0, 0, 10000)    ## norm gaus1
+    fitFunc.SetParameter(1, 1.97 )  ; fitFunc.SetParLimits(1, 1.93, 2.0)   ## mean gaus1
+    fitFunc.SetParameter(2, 0.005 ) ; fitFunc.SetParLimits(2, 0.0001, 0.02)## sigm gaus1
+    fitFunc.SetParameter(3, 600.)   ; fitFunc.SetParLimits(3, 0, 5000)     ## norm gaus2
+    fitFunc.SetParameter(4, 1.87 )  ; fitFunc.SetParLimits(4, 1.83, 1.9)   ## mean gaus2
+    fitFunc.SetParameter(5, 0.005 ) ; fitFunc.SetParLimits(5, 0.0001, 0.02)## sigm gaus2
+    fitFunc.SetParameter(6, 500. ) #; fitFunc.SetParLimits(6, 0, 2000)     ## norm pol1
+    fitFunc.SetParameter(7, -1000) #; fitFunc.SetParLimits(7, -5000, 5000) ## ang. pol1
 
     if setName: fitFunc.SetParName(0, 'N_{1}')    
     if setName: fitFunc.SetParName(1, '#mu_{1}')  
@@ -87,9 +87,6 @@ outFile   = ROOT.TFile.Open('eff_from_ds.root', 'RECREATE')
 jsonStruc = OrderedDict()
 outJson   = open('eff_from_ds.json', 'w')
 
-## log file
-logOut = open('auto_fit.log', 'w')
-
 ## binning
 ptBins  = np.array( [8, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5])
@@ -104,6 +101,9 @@ etaGraph  = ROOT.TGraphErrors()
 effGraphs = [ptGraph, etaGraph]
 
 ## event selection
+##      run > 274954 all stat with tau trigger
+##      run > 278802 final F + GH
+run = 'run > 274954'
 den = 'ds_hasphi & mu1_muonid_soft & mu2_muonid_soft & sv_prob>0.1 & sv_ls>2 & sv_cos>0.999 & hlt_dimuon0_phi_barrel & pi_pt>1.2 & ds_pt>8'
 num = '%s & hlt_doublemu3_trk_tau3mu' % den
 
@@ -118,8 +118,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
     for i in range( len(bins1)-1):
         ## fitfunctions
-        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
-        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
+        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.76, 2.02, 8)
+        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.76, 2.10, 8)
         SetParameters (fitFuncN, setName = True)
         SetParameters (fitFuncD, setName = True)
 
@@ -131,16 +131,16 @@ def getEff( varName, bins, is2D = False, indx = -1):
         else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
-        tree.Draw("ds_mass>>histoN(40, 1.8, 2.1)", '%s & %s' % (num, binR))
-        tree.Draw("ds_mass>>histoD(40, 1.8, 2.1)", '%s & %s' % (den, binR))
+        tree.Draw("ds_mass>>histoN(40, 1.76, 2.1)", '%s & %s & %s' % (num, binR, run))
+        tree.Draw("ds_mass>>histoD(40, 1.76, 2.1)", '%s & %s & %s' % (den, binR, run))
 
         histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
 
         ## fit the histos
-        histoN.Fit(fitFuncN, "RIM")
+        histoN.Fit(fitFuncN, "RIMQ") ; histoN.Fit(fitFuncN, "RIMQ")
         import pdb ; pdb.set_trace()
-        histoD.Fit(fitFuncD, "RIM")
+        histoD.Fit(fitFuncD, "RIMQ") ; histoD.Fit(fitFuncD, "RIMQ")
         import pdb ; pdb.set_trace()
 
         #TryToFixFit(histoN, fitFuncN)
@@ -168,7 +168,7 @@ def getEff( varName, bins, is2D = False, indx = -1):
         eff = intN[0]/intD[0]
         err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1])
 
-         ## results
+        ## results
         jsonOut[getBinRange(i, bins1)] = OrderedDict()
         jsonOut[getBinRange(i, bins1)]['value'] = eff
         jsonOut[getBinRange(i, bins1)]['error'] = err
