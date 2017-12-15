@@ -40,6 +40,44 @@ def getBinRange (i, bins, sep = ','):
     up   =  str(bins[i+1])
     return down+sep+up
 
+def SetParameters(fitFunc, setName = False):
+    fitFunc.SetParameter(0, 2000.) ; fitFunc.SetParLimits(0, 0, 10000)    ## norm gaus1
+    fitFunc.SetParameter(1, 1.97 ) ; fitFunc.SetParLimits(1, 1.93, 2.0)   ## mean gaus1
+    fitFunc.SetParameter(2, 0.005 ) ; fitFunc.SetParLimits(2, 0, 0.02)     ## sigm gaus1
+    fitFunc.SetParameter(3, 1000.) ; fitFunc.SetParLimits(3, 0, 10000)    ## norm gaus2
+    fitFunc.SetParameter(4, 1.87 ) ; fitFunc.SetParLimits(4, 1.83, 1.9)   ## mean gaus2
+    fitFunc.SetParameter(5, 0.005 ) ; fitFunc.SetParLimits(5, 0, 0.02)     ## sigm gaus2
+    fitFunc.SetParameter(6, 500. ) ; fitFunc.SetParLimits(6, 0, 2000)     ## norm pol1
+    fitFunc.SetParameter(7, -1000) ; fitFunc.SetParLimits(7, -5000, 5000) ## ang. pol1
+
+    if setName: fitFunc.SetParName(0, 'N_{1}')    
+    if setName: fitFunc.SetParName(1, '#mu_{1}')  
+    if setName: fitFunc.SetParName(2, '#sigma_{1}')
+    if setName: fitFunc.SetParName(3, 'N_{2}')    
+    if setName: fitFunc.SetParName(4, '#mu_{2}')  
+    if setName: fitFunc.SetParName(5, '#sigma_{2}')
+    if setName: fitFunc.SetParName(6, 'q')        
+    if setName: fitFunc.SetParName(7, 'm')        
+
+## try to automatize the fit (not really smart)
+def TryToFixFit(histo, fitFunc):
+    x_lo = ROOT.Double(0)
+    x_hi = ROOT.Double(0)
+    fitFunc.GetRange(x_lo, x_hi)
+
+    while fitFunc.GetProb() < 0.01:
+        if x_lo > 1.82 and x_hi < 1.99: return False
+
+        SetParameters(fitFunc)
+        if x_hi > 1.99: x_hi = x_hi - 0.01
+        else: x_lo = x_lo + 0.01
+        
+        fitFunc.SetRange(x_lo, x_hi)
+        histo.Fit(fitFunc, "RIM")
+
+    return True
+
+
 ## some objects
 inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016.root')
 tree      = inFile.Get("tree")
@@ -48,6 +86,9 @@ outFile   = ROOT.TFile.Open('eff_from_ds.root', 'RECREATE')
 ## json output
 jsonStruc = OrderedDict()
 outJson   = open('eff_from_ds.json', 'w')
+
+## log file
+logOut = open('auto_fit.log', 'w')
 
 ## binning
 ptBins  = np.array( [8, 15 , 35, 1000])
@@ -79,24 +120,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
         ## fitfunctions
         fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
         fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
-        ## set the fit functions
-        fitFuncD.SetParameter(0, 1000.) ; fitFuncD.SetParLimits(0, 0, 10000)    ; fitFuncD.SetParName(0, 'N_{1}')      ## norm gaus1
-        fitFuncD.SetParameter(1, 1.97 ) ; fitFuncD.SetParLimits(1, 1.93, 2.0)   ; fitFuncD.SetParName(1, '#mu_{1}')    ## mean gaus1
-        fitFuncD.SetParameter(2, 0.01 ) ; fitFuncD.SetParLimits(2, 0, 0.07)     ; fitFuncD.SetParName(2, '#sigma_{1}') ## sigm gaus1
-        fitFuncD.SetParameter(3, 1000.) ; fitFuncD.SetParLimits(3, 0, 10000)    ; fitFuncD.SetParName(3, 'N_{2}')      ## norm gaus2
-        fitFuncD.SetParameter(4, 1.87 ) ; fitFuncD.SetParLimits(4, 1.83, 1.9)   ; fitFuncD.SetParName(4, '#mu_{2}')    ## mean gaus2
-        fitFuncD.SetParameter(5, 0.01 ) ; fitFuncD.SetParLimits(5, 0, 0.07)     ; fitFuncD.SetParName(5, '#sigma_{2}') ## sigm gaus2
-        fitFuncD.SetParameter(6, 500. ) ; fitFuncD.SetParLimits(6, 0, 2000)     ; fitFuncD.SetParName(6, 'q')          ## norm pol1
-        fitFuncD.SetParameter(7, -1000) ; fitFuncD.SetParLimits(7, -5000, 5000) ; fitFuncD.SetParName(7, 'm')          ## ang. pol1
-
-        fitFuncN.SetParameter(0, 1000.) ; fitFuncN.SetParLimits(0, 0, 10000)    ; fitFuncN.SetParName(0, 'N_{1}')      ## norm gaus1
-        fitFuncN.SetParameter(1, 1.97 ) ; fitFuncN.SetParLimits(1, 1.93, 2.0)   ; fitFuncN.SetParName(1, '#mu_{1}')    ## mean gaus1
-        fitFuncN.SetParameter(2, 0.01 ) ; fitFuncN.SetParLimits(2, 0, 0.07)     ; fitFuncN.SetParName(2, '#sigma_{1}') ## sigm gaus1
-        fitFuncN.SetParameter(3, 1000.) ; fitFuncN.SetParLimits(3, 0, 10000)    ; fitFuncN.SetParName(3, 'N_{2}')      ## norm gaus2
-        fitFuncN.SetParameter(4, 1.87 ) ; fitFuncN.SetParLimits(4, 1.83, 1.9)   ; fitFuncN.SetParName(4, '#mu_{2}')    ## mean gaus2
-        fitFuncN.SetParameter(5, 0.01 ) ; fitFuncN.SetParLimits(5, 0, 0.07)     ; fitFuncN.SetParName(5, '#sigma_{2}') ## sigm gaus2
-        fitFuncN.SetParameter(6, 500. ) ; fitFuncN.SetParLimits(6, 0, 2000)     ; fitFuncN.SetParName(6, 'q')          ## norm pol1
-        fitFuncN.SetParameter(7, -1000) ; fitFuncN.SetParLimits(7, -5000, 5000) ; fitFuncN.SetParName(7, 'm')          ## ang. pol1
+        SetParameters (fitFuncN, setName = True)
+        SetParameters (fitFuncD, setName = True)
 
         ##get the bin range
         if is2D:
@@ -113,8 +138,13 @@ def getEff( varName, bins, is2D = False, indx = -1):
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
 
         ## fit the histos
-        histoN.Fit(fitFuncN)#, "RIM")
-        histoD.Fit(fitFuncD)#, "RIM")
+        histoN.Fit(fitFuncN, "RIM")
+        import pdb ; pdb.set_trace()
+        histoD.Fit(fitFuncD, "RIM")
+        import pdb ; pdb.set_trace()
+
+        #TryToFixFit(histoN, fitFuncN)
+        #TryToFixFit(histoD, fitFuncD)
 
         ## update the fit function to the fit panel results
         fitFuncN = histoN.GetFunction(fitFuncN.GetName())
