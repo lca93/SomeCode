@@ -50,10 +50,11 @@ jsonStruc = OrderedDict()
 outJson   = open('eff_from_ds.json', 'w')
 
 ## binning
-ptBins  = np.array( [8, 15 , 30, 1000])
+ptBins  = np.array( [8, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5])
 varList = [ ('pt' , ptBins ),
-            ('eta', etaBins)
+            ('eta', etaBins),
+            ('pt_eta', (ptBins, etaBins))
 ]
 
 ## efficiencies graphs
@@ -68,9 +69,13 @@ num = '%s & hlt_doublemu3_trk_tau3mu' % den
 ## 2D eff
 eff_2D = ROOT.TH2F('2Deff', '', len(ptBins)-1, 0, len(ptBins)-1, len(etaBins)-1, 0, len(etaBins)-1)
 
-def getEff( varName, bins):
+def getEff( varName, bins, is2D = False, indx = -1):
     jsonOut = OrderedDict()
-    for i in range( len(bins)-1):
+
+    if is2D: bins1 = bins[0] ; bins2 = bins[1]
+    else: bins1 = bins
+
+    for i in range( len(bins1)-1):
         ## fitfunctions
         fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
         fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
@@ -94,22 +99,30 @@ def getEff( varName, bins):
         fitFuncN.SetParameter(7, -1000) ; fitFuncN.SetParLimits(7, -5000, 5000) ; fitFuncN.SetParName(7, 'm')          ## ang. pol1
 
         ##get the bin range
-        binR = BinRange(i, vv[1], vv[0])
+        if is2D:
+            var1 = varName.split('_')[0]
+            var2 = varName.split('_')[1]
+            binR = '%s & %s' % (BinRange(i, bins1, var1), BinRange(indx, bins2, var2))
+        else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
         tree.Draw("ds_mass>>histoN(40, 1.8, 2.1)", '%s & %s' % (num, binR))
         tree.Draw("ds_mass>>histoD(40, 1.8, 2.1)", '%s & %s' % (den, binR))
-        
-        histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('%s_bin%s NUM' % (varName, i))
-        histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('%s_bin%s DEN' % (varName, i))
+
+        histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
+        histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
 
         ## fit the histos
-        histoN.Fit(fitFuncN, "RIM")
-        histoD.Fit(fitFuncD, "RIM")
+        histoN.Fit(fitFuncN)#, "RIM")
+        histoD.Fit(fitFuncD)#, "RIM")
 
         ## update the fit function to the fit panel results
         fitFuncN = histoN.GetFunction(fitFuncN.GetName())
         fitFuncD = histoD.GetFunction(fitFuncD.GetName())
+
+        ## write in file
+        histoN.Write()
+        histoD.Write()
 
         ## get the integral
         intD = GetGausIntegral( fitFuncD.GetParameter(0), fitFuncD.GetParameter(2),
@@ -126,21 +139,25 @@ def getEff( varName, bins):
         err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1])
 
          ## results
-        jsonOut[getBinRange(i, bins)] = OrderedDict()
-        jsonOut[getBinRange(i, bins)]['value'] = eff
-        jsonOut[getBinRange(i, bins)]['error'] = err
+        jsonOut[getBinRange(i, bins1)] = OrderedDict()
+        jsonOut[getBinRange(i, bins1)]['value'] = eff
+        jsonOut[getBinRange(i, bins1)]['error'] = err
 
     return jsonOut
 
 for vv in varList:
     jsonStruc[vv[0]] = OrderedDict()
-    if not isinstance(vv[1], tuple): 
-        jsonStruc[vv[0]] = getEff( vv[0], vv[1])
-    else:
-        var1 = vv[0].split('_')[1]
-        var2 = vv[0].split('_')[0]
+    outFile.cd() ; outFile.mkdir(vv[0]) ; outFile.cd(vv[0])
+
+    if not isinstance(vv[1], tuple):     ## 1D efficiencies 
+        jsonStruc[vv[0]] = getEff(varName = vv[0], bins = vv[1])
+    else:                                ## 2D efficiencies
         for j in range( len(vv[1][1])-1):
+            outFile.GetDirectory(vv[0]).mkdir(getBinRange(j, vv[1][1])) ; outFile.GetDirectory(vv[0]).cd(getBinRange(j, vv[1][1]))
+            
             jsonStruc[vv[0]][getBinRange(j, vv[1][1])] = OrderedDict()
-            jsonStruc[vv[0]][getBinRange(j, vv[1][1])] = getEff('%s_bin%s__%s_bin%s' % (var1, j, var2), vv[1][0])
+            jsonStruc[vv[0]][getBinRange(j, vv[1][1])] = getEff(varName = vv[0], bins = vv[1], is2D = True, indx = j)
 
 outJson.write(json.dumps(jsonStruc, indent=4, sort_keys=False))
+outJson.close()
+outFile.Close()
