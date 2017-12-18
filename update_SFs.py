@@ -23,7 +23,7 @@ else: fID = ID
 
 ##input files
 jsonFileI = open('%s/ScaleFactors_%s_muonID.json' % (fID, ID), 'r')
-jsonStruc = json.load(jsonFileI)
+jsonStruc = json.load(jsonFileI, object_pairs_hook=OrderedDict)
 
 ## output file
 jsonFileO = open('%s/ScaleFactors_%s_muonID_updt.json' % (fID, ID), 'w')
