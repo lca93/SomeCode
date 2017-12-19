@@ -10,11 +10,14 @@ ROOT.gStyle.SetOptStat(1000000001)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
+global binsize
+binsize = 0.0075
+
 ## return the gaus integral (NOTE needs bin width)
 def GetGausIntegral(norm, sigma, errNorm, errSigma):
-    area = norm*sigma*math.sqrt(2.*math.pi)
-    error= math.sqrt(2.*math.pi) * (norm*errSigma + sigma*errNorm)
-    res = np.array([area/0.0075, error**2])
+    area = norm*sigma*math.sqrt(2.*math.pi)/binsize
+    error= (2.*math.pi) * ( (norm*errSigma)**2 + (sigma*errNorm)**2 ) / (binsize**2)
+    res = np.array([area, error])
 
     return  res
 
@@ -118,8 +121,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
     for i in range( len(bins1)-1):
         ## fitfunctions
-        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.76, 2.02, 8)
-        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.76, 2.10, 8)
+        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
+        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
         SetParameters (fitFuncN, setName = True)
         SetParameters (fitFuncD, setName = True)
 
@@ -131,8 +134,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
         else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
-        tree.Draw("ds_mass>>histoN(40, 1.76, 2.1)", '%s & %s & %s' % (num, binR, run))
-        tree.Draw("ds_mass>>histoD(40, 1.76, 2.1)", '%s & %s & %s' % (den, binR, run))
+        tree.Draw("ds_mass>>histoN(40, 1.8, 2.1)", '%s & %s & %s' % (num, binR, run))
+        tree.Draw("ds_mass>>histoD(40, 1.8, 2.1)", '%s & %s & %s' % (den, binR, run))
 
         histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
