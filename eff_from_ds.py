@@ -10,11 +10,14 @@ ROOT.gStyle.SetOptStat(1000000001)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
+global binsize
+binsize = 0.0075
+
 ## return the gaus integral (NOTE needs bin width)
 def GetGausIntegral(norm, sigma, errNorm, errSigma):
-    area = norm*sigma*math.sqrt(2.*math.pi)
-    error= math.sqrt(2.*math.pi) * (norm*errSigma + sigma*errNorm)
-    res = np.array([area/0.0075, error**2])
+    area = norm*sigma*math.sqrt(2.*math.pi)/binsize
+    error= (2.*math.pi) * ( (norm*errSigma)**2 + (sigma*errNorm)**2 ) / (binsize**2)
+    res = np.array([area, error])
 
     return  res
 
@@ -49,7 +52,7 @@ def SetParameters(fitFunc, setName = False):
     fitFunc.SetParameter(5, 0.005 ) ; fitFunc.SetParLimits(5, 0.0001, 0.02)## sigm gaus2
     fitFunc.SetParameter(6, 500. ) #; fitFunc.SetParLimits(6, 0, 2000)     ## norm pol1
     fitFunc.SetParameter(7, -1000) #; fitFunc.SetParLimits(7, -5000, 5000) ## ang. pol1
-
+    
     if setName: fitFunc.SetParName(0, 'N_{1}')    
     if setName: fitFunc.SetParName(1, '#mu_{1}')  
     if setName: fitFunc.SetParName(2, '#sigma_{1}')
@@ -57,26 +60,7 @@ def SetParameters(fitFunc, setName = False):
     if setName: fitFunc.SetParName(4, '#mu_{2}')  
     if setName: fitFunc.SetParName(5, '#sigma_{2}')
     if setName: fitFunc.SetParName(6, 'q')        
-    if setName: fitFunc.SetParName(7, 'm')        
-
-## try to automatize the fit (not really smart)
-def TryToFixFit(histo, fitFunc):
-    x_lo = ROOT.Double(0)
-    x_hi = ROOT.Double(0)
-    fitFunc.GetRange(x_lo, x_hi)
-
-    while fitFunc.GetProb() < 0.01:
-        if x_lo > 1.82 and x_hi < 1.99: return False
-
-        SetParameters(fitFunc)
-        if x_hi > 1.99: x_hi = x_hi - 0.01
-        else: x_lo = x_lo + 0.01
-        
-        fitFunc.SetRange(x_lo, x_hi)
-        histo.Fit(fitFunc, "RIM")
-
-    return True
-
+    if setName: fitFunc.SetParName(7, 'm')              
 
 ## some objects
 inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016.root')
@@ -118,8 +102,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
     for i in range( len(bins1)-1):
         ## fitfunctions
-        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.76, 2.02, 8)
-        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.76, 2.10, 8)
+        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
+        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
         SetParameters (fitFuncN, setName = True)
         SetParameters (fitFuncD, setName = True)
 
@@ -131,8 +115,8 @@ def getEff( varName, bins, is2D = False, indx = -1):
         else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
-        tree.Draw("ds_mass>>histoN(40, 1.76, 2.1)", '%s & %s & %s' % (num, binR, run))
-        tree.Draw("ds_mass>>histoD(40, 1.76, 2.1)", '%s & %s & %s' % (den, binR, run))
+        tree.Draw("ds_mass>>histoN(40, 1.8, 2.1)", '%s & %s & %s' % (num, binR, run))
+        tree.Draw("ds_mass>>histoD(40, 1.8, 2.1)", '%s & %s & %s' % (den, binR, run))
 
         histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
@@ -142,9 +126,6 @@ def getEff( varName, bins, is2D = False, indx = -1):
         import pdb ; pdb.set_trace()
         histoD.Fit(fitFuncD, "RIMQ") ; histoD.Fit(fitFuncD, "RIMQ")
         import pdb ; pdb.set_trace()
-
-        #TryToFixFit(histoN, fitFuncN)
-        #TryToFixFit(histoD, fitFuncD)
 
         ## update the fit function to the fit panel results
         fitFuncN = histoN.GetFunction(fitFuncN.GetName())
