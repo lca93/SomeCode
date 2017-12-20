@@ -1,5 +1,6 @@
 import ROOT
 import json
+import math
 import numpy as np
 
 from collections import OrderedDict
@@ -13,9 +14,9 @@ class FittR():
 
         self.workspace = workspace
 
-        self.den   = '%s & %s'           %(den, run)
-        self.failN = '%s & %s == 0 & %s' %(den, num, run)
-        self.passN = '%s & %s & %s'      %(den, num, run)
+        self.den   = '%s & %s'      %(den, run)
+        self.failN = '%s & %s == 0' %(self.den, num)
+        self.passN = '%s & %s'      %(self.den, num)
 
         self.RooVar    = self.workspace.var(varName)
         self.mainVar   = varName
@@ -102,48 +103,79 @@ class FittR():
         jsonOut = OrderedDict()
 
         for i in range( len(bins)-1):
-            cc = ROOT.TCanvas() ; cc.Divide(2,2) ; cc.SetName('%s_bin%s' %(varName, i))
+            binRange = self.getBinRange(varName, bins, i)            
 
-            binRange = self.getBinRange(varName, bins, i)
+            passH = self.load_histo('pass_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.passN))
+            failH = self.load_histo('fail_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.failN))
+            totlH = self.load_histo('totl_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.den  ))
 
-            framP = self.RooVar.frame()
-            framF = self.RooVar.frame()
-            framA = self.RooVar.frame()
-
-            passH = self.load_histo('pass_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.passN)) ; framP.SetTitle('[%s] PASS bin%s'  %(varName, i))
-            failH = self.load_histo('fail_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.failN)) ; framF.SetTitle('[%s] FAIL bin%s'  %(varName, i))
-            totlH = self.load_histo('totl_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.den  )) ; framA.SetTitle('[%s] ALL bin%s'   %(varName, i))
-
-            self.pdfFail.fitTo(failH)
-            self.pdfPass.fitTo(passH)  
-
-            passH.plotOn(framP)
-            failH.plotOn(framF)
-            totlH.plotOn(framA)
+            if failH.sum(0) > passH.sum(0):
+                fitresPass = self.pdfPass.fitTo(passH, ROOT.RooFit.Save())  
+                fitresFail = self.pdfFail.fitTo(failH, ROOT.RooFit.Save())
+            else:
+                fitresFail = self.pdfFail.fitTo(failH, ROOT.RooFit.Save())
+                fitresPass = self.pdfPass.fitTo(passH, ROOT.RooFit.Save()) 
         
-            self.pdfPass.plotOn(framP, 
-                                ROOT.RooFit.LineColor(ROOT.kGreen)) 
-            self.pdfPass.plotOn(framP,
-                                ROOT.RooFit.Components('backgroundPass'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kGreen))
-            self.pdfFail.plotOn(framF, 
-                                ROOT.RooFit.LineColor(ROOT.kRed)) 
-            self.pdfFail.plotOn(framF,
-                                ROOT.RooFit.Components('backgroundFail'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kRed))
-            self.pdfTotl.plotOn(framA, ROOT.RooFit.LineColor(ROOT.kBlue))
-            
-            cc.cd(1) ; framP.Draw()
-            cc.cd(2) ; framF.Draw()
-            cc.cd(3) ; framA.Draw()
-            cc.Write()
+            ef_er = self.calculateEfficiency(fitresPass, fitresFail, passH, failH)
 
             jsonOut[self.getBinLabel(i, bins)] = OrderedDict()
-            jsonOut[self.getBinLabel(i, bins)]['value'] = 'gino'
-            jsonOut[self.getBinLabel(i, bins)]['error'] = 'pino'
-
+            jsonOut[self.getBinLabel(i, bins)]['value'] = ef_er[0]
+            jsonOut[self.getBinLabel(i, bins)]['error'] = ef_er[1]
+            
+            cc = self.plotResults(passH, failH, totlH, varName, i)
+            cc.Write()
             cc.Close()
+
+            fitresPass.SetName('FITRES__%s' % cc.GetName()) ; fitresPass.Write()
+            fitresFail.SetName('FITRES__%s' % cc.GetName()) ; fitresFail.Write()
+
             self.ReInitVals()
 
         return jsonOut
+
+    def plotResults(self, passH, failH, totlH, varName, index):
+        can = ROOT.TCanvas() ; can.Divide(2,2) ; can.SetName('%s_bin%s' %(varName, index))
+
+        framP = self.RooVar.frame() ; framP.SetTitle('[%s] PASS bin%s'  %(varName, index))
+        framF = self.RooVar.frame() ; framF.SetTitle('[%s] FAIL bin%s'  %(varName, index))
+        framA = self.RooVar.frame() ; framA.SetTitle('[%s] ALL bin%s'   %(varName, index))
+
+        passH.plotOn(framP)
+        failH.plotOn(framF)
+        totlH.plotOn(framA)
+
+        self.pdfPass.plotOn(framP, 
+                            ROOT.RooFit.LineColor(ROOT.kGreen)) 
+        self.pdfPass.plotOn(framP,
+                            ROOT.RooFit.Components('backgroundPass'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kGreen))
+        self.pdfFail.plotOn(framF, 
+                            ROOT.RooFit.LineColor(ROOT.kRed)) 
+        self.pdfFail.plotOn(framF,
+                            ROOT.RooFit.Components('backgroundFail'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kRed))
+        self.pdfTotl.plotOn(framA, ROOT.RooFit.LineColor(ROOT.kBlue))
+
+        can.cd(1) ; framP.Draw()
+        can.cd(2) ; framF.Draw()
+        can.cd(3) ; framA.Draw()
+
+        return can
+
+    def calculateEfficiency(self, fitresP, fitresF, passH, failH):
+        intP = self.pdfPass.createIntegral(ROOT.RooArgSet(self.RooVar)).getValV() * passH.sum(0) 
+        intF = self.pdfFail.createIntegral(ROOT.RooArgSet(self.RooVar)).getValV() * failH.sum(0)
+        intDen = intP + intF
+
+        errP = self.pdfPass.createIntegral(ROOT.RooArgSet(self.RooVar)).getPropagatedError(fitresP) * passH.sum(0) 
+        errF = self.pdfFail.createIntegral(ROOT.RooArgSet(self.RooVar)).getPropagatedError(fitresF) * failH.sum(0) 
+        errDen = math.sqrt( errP**2 + errF**2)
+
+        eff = intP/intDen
+        err = math.sqrt( (errP/intDen)**2 + (intP*errDen/(intDen**2))**2)
+
+        return eff, err
+
+
+
 
 
 
