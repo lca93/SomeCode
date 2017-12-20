@@ -1,109 +1,151 @@
 import ROOT
 import json
+import numpy as np
 
 from collections import OrderedDict
 
 class FittR():
-    def __init__(self, iFile, mainVar, RooVar, binning, den, num, run, varList = []):
+    def __init__(self, iFile, varName, nBins, den, num, run, workspace, varList = []):
         self.iFile = iFile
         self.tree  = iFile.Get('tree')
 
-        self.mainVar = mainVar
-        self.binning = binning
+        self.nBins = nBins
 
-        self.den = den
-        self.num = num
-        self.run = run
+        self.workspace = workspace
 
-        self.RooVar = RooVar
+        self.den   = '%s & %s'           %(den, run)
+        self.failN = '%s & %s == 0 & %s' %(den, num, run)
+        self.passN = '%s & %s & %s'      %(den, num, run)
 
-        self.oFile = ROOT.TFile.Open('eff_from_ds.rot', 'RECREATE')
-        self.oJson = open('eff_from_ds.json', 'w')
-        self.dJson = OrderedDict()
+        self.RooVar    = self.workspace.var(varName)
+        self.mainVar   = varName
+        self.mainRange = '(%s, %s, %s)' %(nBins, self.RooVar.getMin(), self.RooVar.getMax())
+
+        self.signalPass = self.workspace.pdf('signalPass')
+        self.signalFail = self.workspace.pdf('signalFail')
+        self.backgroundPass = self.workspace.pdf('backgroundPass')
+        self.backgroundFail = self.workspace.pdf('backgroundFail')
+
+        self.pdfPass = None
+        self.pdfFail = None
+        self.pdfTotl = None
+
+        self.ParseWorkspace()
+
+        self.outFile   = ROOT.TFile.Open('eff_from_ds.root', 'RECREATE')
+        self.jsonStruc = OrderedDict()
+
+        self.InitVals = np.array([0]*ROOT.RooArgList(self.workspace.allVars()).getSize(), 'float64')
+        self.SaveInitValues()
 
         self.varList = varList
-        self.fitVars = []
-
-        self.fitF_pN = None
-        self.fitF_fN = None
-        self.fitF_DD = None
 
     def AddVariable(self, var_cpl):
         ## add couple (variable, binning)
         self.varList.append(var_cpl)
 
-    def SetFitF(self, passN, failN, total):
+    def ParseWorkspace(self):
         ## set fit funxtion for pass, fail, total
-        self.fitF_pN = passN
-        self.fitF_fN = failN
-        self.fitF_DD = total
+        self.workspace.factory('SUM::pdfPass(yieldSignalPass[0,1]*signalPass,backgroundPass)')
+        self.workspace.factory('SUM::pdfFail(yieldSignalFail[0,1]*signalFail,backgroundFail)')
+        self.workspace.factory('SUM::pdfTotl(yieldPass[0.5]*pdfPass,pdfFail)')
+        
+        self.pdfPass = self.workspace.pdf('pdfPass')
+        self.pdfFail = self.workspace.pdf('pdfFail')
+        self.pdfTotl = self.workspace.pdf('pdfTotl')
+
+        self.allRooVars = ROOT.RooArgList(self.workspace.allVars())
+
+    def SaveInitValues(self):
+        for i in range( len(self.InitVals)): 
+            self.InitVals[i] =  ROOT.RooArgList(self.workspace.allVars())[i].getValV()
+
+    def ReInitVals(self):
+        for i in range( len(self.InitVals)):
+            ROOT.RooArgList(self.workspace.allVars())[i].setVal( self.InitVals[i])
 
     def load_histo(self, name, cut):
         ## load hist with cut
-        self.tree.Draw('%s>>histo%s' % (self.mainVar, self.binning), cut)
+        aux = ROOT.TCanvas() ; aux.cd()
+        self.tree.Draw('%s>>histo%s' % (self.mainVar, self.mainRange), cut)
+        aux.Close()
         return ROOT.RooDataHist(name, name, ROOT.RooArgList(self.RooVar), ROOT.gDirectory.Get('histo'))
 
-    def BuildGaussian(self, name, mean, sigma):
-        ## build a gaussian function from input
-        mn = str(mean. split('[')[0])
-        sn = str(sigma.split('[')[0])
+    def getBinRange(self, varName, bins, index):
+        return '%s >= %s & %s <= %s' %(varName, bins[index], varName, bins[index+1])
 
-        mm = [ float(mean .replace('%s[' %mn, '').split(', ')[i].replace(']', '')) for i in range(3)] 
-        ss = [ float(sigma.replace('%s[' %sn, '').split(', ')[i].replace(']', '')) for i in range(3)] 
+    def getBins1D(self, varName):
+        for vv, bb in varList: 
+            if vv == varName: return bb
+        print 'ERROR::variable %s not found' %varName
 
-        if self.checkPreDefinition(mn): 
-            for vv in self.fitVars: 
-                if vv[0].GetName() == mn: mean = vv[0]
-        else: mean  = ROOT.RooRealVar(mn, mn, mm[0], mm[1], mm[2]) ; self.SaveVar(mean, mean.getValV())
+    def getBinLabel (self, i, bins, sep = ','):
+        dwn =  str(bins[i])
+        upp =  str(bins[i+1])
+        return dwn+sep+upp
 
-        if self.checkPreDefinition(sn): 
-            for vv in self.fitVars: 
-                if vv[0].GetName() == sn: sigma = vv[0]
-        else: sigma  = ROOT.RooRealVar(sn, sn, ss[0], ss[1], ss[2]) ; self.SaveVar(sigma, sigma.getValV())
+    def generateJson(self):
+        for vv, bb in self.varList:
+            self.outFile.cd() ; self.outFile.mkdir(vv) ; self.outFile.cd(vv)
+            self.jsonStruc[vv] = OrderedDict()
+            if not isinstance(bb, tuple): self.jsonStruc[vv] = self.getEff(vv, bb)
+            else: continue
 
-        return ROOT.RooGaussian(name, name, self.RooVar, mean, sigma)
+    def saveResults(self, title):
+        jsonFile = open(title, 'w')
+        jsonFile.write( json.dumps(self.jsonStruc, indent=4, sort_keys=False))
+        
+        jsonFile.close()
+        self.outFile.Close()
 
-    def BuildPolynomial1(self, name, pars):
-        ## build a polynomial of degree 1 from input
-        argList = []
-        for pp in pars:
-            np = pp.split('[')[0]
-            rp = [ float(pp.split('[')[1].split(',')[i].replace(']', '')) for i in range(3)]
+    def getEff(self, varName, bins):
+        jsonOut = OrderedDict()
 
-            if self.checkPreDefinition(np):
-                for vv in self.fitVars: 
-                    if vv[0].GetName() == np: par = vv[0]
-            else: par = ROOT.RooRealVar( np, np, rp[0], rp[1], rp[2]) ;  self.SaveVar(par, par.getValV())
+        for i in range( len(bins)-1):
+            cc = ROOT.TCanvas() ; cc.Divide(2,2) ; cc.SetName('%s_bin%s' %(varName, i))
 
-            argList.append(par)
+            binRange = self.getBinRange(varName, bins, i)
 
-        return ROOT.RooPolynomial(name, name, self.RooVar, ROOT.RooArgList(argList[0], argList[1]))
+            framP = self.RooVar.frame()
+            framF = self.RooVar.frame()
+            framA = self.RooVar.frame()
 
-    def Sum2PDFs(self, name, pdf1, pdf2, yild = 0):
-        ## sum two pdfs, can use fied yield
-        if not yild: Y = ROOT.RooRealVar ('%s_yield' % name, '%s_yield' % name, 0, 1) ; self.SaveVar(Y, Y.getValV())
-        else:        Y = ROOT.RooConstVar('%s_yield' % name, '%s_yield' % name, yild) ; self.SaveVar(Y, Y.getValV())
-        return ROOT.RooAddPdf(name, name, pdf1, pdf2, Y)
+            passH = self.load_histo('pass_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.passN)) ; framP.SetTitle('[%s] PASS bin%s'  %(varName, i))
+            failH = self.load_histo('fail_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.failN)) ; framF.SetTitle('[%s] FAIL bin%s'  %(varName, i))
+            totlH = self.load_histo('totl_%s_bin%s' %(varName, i), '%s & %s' %(binRange, self.den  )) ; framA.SetTitle('[%s] ALL bin%s'   %(varName, i))
 
-    def SaveVar(self, var, value):
-        ## save var for code stability: RooFit needs this
-        self.fitVars.append((var, value))
+            self.pdfFail.fitTo(failH)
+            self.pdfPass.fitTo(passH)  
 
-    def FindVar(self, name):
-        ## find RooFit var by name
-        for vv in self.fitVars:
-            if vv[0].GetName() == name: return vv[0]
-        return False
+            passH.plotOn(framP)
+            failH.plotOn(framF)
+            totlH.plotOn(framA)
+        
+            self.pdfPass.plotOn(framP, 
+                                ROOT.RooFit.LineColor(ROOT.kGreen)) 
+            self.pdfPass.plotOn(framP,
+                                ROOT.RooFit.Components('backgroundPass'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kGreen))
+            self.pdfFail.plotOn(framF, 
+                                ROOT.RooFit.LineColor(ROOT.kRed)) 
+            self.pdfFail.plotOn(framF,
+                                ROOT.RooFit.Components('backgroundFail'), ROOT.RooFit.LineStyle(ROOT.kDashed), ROOT.RooFit.LineColor(ROOT.kRed))
+            self.pdfTotl.plotOn(framA, ROOT.RooFit.LineColor(ROOT.kBlue))
+            
+            cc.cd(1) ; framP.Draw()
+            cc.cd(2) ; framF.Draw()
+            cc.cd(3) ; framA.Draw()
+            cc.Write()
 
-    def ResetVars(self):
-        ## reset all variables to teir initial values
-        for vv in self.fitVars: 
-            vv[0].setVal( vv[1])
+            jsonOut[self.getBinLabel(i, bins)] = OrderedDict()
+            jsonOut[self.getBinLabel(i, bins)]['value'] = 'gino'
+            jsonOut[self.getBinLabel(i, bins)]['error'] = 'pino'
 
-    def checkPreDefinition(self, varName):
-        ## check whether the variable has already been defined.
-        ## avoids redefinition and allows to use the same variable for multiple functions
-        for vv in self.fitVars:
-            if vv[0].GetName() == varName: return True
-        return False
+            cc.Close()
+            self.ReInitVals()
+
+        return jsonOut
+
+
+
+
 
