@@ -49,10 +49,14 @@ def getBinRange (i, bins, sep = ','):
     up   =  str(bins[i+1])
     return down+sep+up
 
+def setBackgdParams(bacPdf, fitPdf):
+    for i in range(3): bacPdf.FixParameter(i, fitPdf.GetParameter(i))
+    bacPdf.Draw('same')
+
 def SetParameters(fitFunc, setName = False):
-    fitFunc.SetParameter(0, 2000.)  ; fitFunc.SetParLimits(0, 0, 10000)    ## norm gaus1
-    fitFunc.SetParameter(1, 5.28 )  ; fitFunc.SetParLimits(1, 5.2, 5.5)    ## mean gaus1
-    fitFunc.SetParameter(2, 0.05 )  ; fitFunc.SetParLimits(2, 0.0001, 0.2) ## sigm gaus1
+    fitFunc.SetParameter(3, 2000.)  ; fitFunc.SetParLimits(3, 0, 100000)    ## norm gaus1
+    fitFunc.SetParameter(4, 5.28 )  ; fitFunc.SetParLimits(4, 5.2, 5.5)    ## mean gaus1
+    fitFunc.SetParameter(5, 0.05 )  ; fitFunc.SetParLimits(5, 0.0001, 0.2) ## sigm gaus1
     #fitFunc.SetParameter(3, 100 )  ; fitFunc.SetParLimits(3, 0, 10000)  
     #fitFunc.SetParameter(4, 5.28)   ; fitFunc.SetParLimits(4, 5.2, 5.5)
     #fitFunc.SetParameter(5, 0.05)   ; fitFunc.SetParLimits(5, 0.02, 0.2)
@@ -60,30 +64,30 @@ def SetParameters(fitFunc, setName = False):
     #fitFunc.SetParameter(7, 200)    #; 
     #fitFunc.SetParameter(8, -200)   #; 
     
-    if setName: fitFunc.SetParName(0, 'N_{1}')    
-    if setName: fitFunc.SetParName(1, '#mu_{1}')  
-    if setName: fitFunc.SetParName(2, '#sigma_{1}')
-    if setName: fitFunc.SetParName(3, 'a')              
-    if setName: fitFunc.SetParName(4, 'b')              
-    if setName: fitFunc.SetParName(5, 'c')              
+    if setName: fitFunc.SetParName(3, 'N_{1}')    
+    if setName: fitFunc.SetParName(4, '#mu_{1}')  
+    if setName: fitFunc.SetParName(5, '#sigma_{1}')
+    if setName: fitFunc.SetParName(0, 'a')              
+    if setName: fitFunc.SetParName(1, 'b')              
+    if setName: fitFunc.SetParName(2, 'c')              
 
 ## some objects
-inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/bp_0p1stat.root')
+inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/bp_allstat.root')
 tree      = inFile.Get("mTree")
-outFile   = ROOT.TFile.Open('0p1stat_highLumi.root', 'RECREATE')
+outFile   = ROOT.TFile.Open('BF_lumiBins.root', 'RECREATE')
 
 ## json output
 jsonStruc = OrderedDict()
-outJson   = open('0p1stat_highLumi.json', 'w')
+outJson   = open('BF_lumiBins.json', 'w')
 
 ## binning
 ptBins  = np.array( [5, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5, 2.4])
-lumiBins= np.array( [2500, 5000, 7500, 10000])
+lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
 varList = [ #('bp_pt' , ptBins ),
             #('bp_eta', etaBins),
-            #('iLumi', lumiBins),
-            ('pt_eta', (ptBins, etaBins))
+            ('iLumi', lumiBins),
+            #('pt_eta', (ptBins, etaBins))
 ]
 
 ## efficiencies graphs
@@ -94,10 +98,16 @@ effGraphs = [ptGraph, etaGraph]
 ## event selection
 ##      run > 274954 all stat with tau trigger
 ##      run > 278802 final F + GH
+##      run < 278810 BF period
+##      run > 278810 GH period
+## lumiBins: 6000-8000-10000-++
 ## see test/readTree_Bp.C from https://github.com/sarafiorendi/MuMuTrkHLT/tree/tau3mu
-aux = 'iLumi > 8000'
+aux = 'run < 278810'
 den = '1'
 num = '%s && pass' % den 
+
+c1 = ROOT.TCanvas()
+c1.cd()
 
 ## 2D eff
 eff_2D = ROOT.TH2F('2Deff', '', len(ptBins)-1, 0, len(ptBins)-1, len(etaBins)-1, 0, len(etaBins)-1)
@@ -110,8 +120,15 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
     for i in range( len(bins1)-1):
         ## fitfunctions
-        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 5.1, 5.4, 6 )
-        fitFuncD = ROOT.TF1('fitFden', fitFunc, 5.1, 5.4, 6 )
+        #fitFuncN = ROOT.TF1('fitFnum', fitFunc, 5.13, 5.38, 6 )
+        #fitFuncD = ROOT.TF1('fitFden', fitFunc, 5.13, 5.38, 6 )
+        signalN = ROOT.TF1('sigN', 'gaus', 5.13, 5.38)
+        signalD = ROOT.TF1('sigD', 'gaus', 5.13, 5.38)
+        backgdN = ROOT.TF1('bacN', 'pol2', 5.13, 5.38) ; backgdN.SetLineColor(ROOT.kGreen)
+        backgdD = ROOT.TF1('bacD', 'pol2', 5.13, 5.38) ; backgdD.SetLineColor(ROOT.kGreen)
+
+        fitFuncN = ROOT.TF1('fitFnum', 'sigN+bacN', 5.13, 5.38)
+        fitFuncD = ROOT.TF1('fitFden', 'sigD+bacD', 5.13, 5.38)
         SetParameters (fitFuncN, setName = True)
         SetParameters (fitFuncD, setName = True)
 
@@ -123,16 +140,16 @@ def getEff( varName, bins, is2D = False, indx = -1):
         else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
-        tree.Draw("bMass>>histoN(28, 5.1, 5.4)", '%s & %s & %s' % (num, binR, aux))
-        tree.Draw("bMass>>histoD(28, 5.1, 5.4)", '%s & %s & %s' % (den, binR, aux))
+        tree.Draw("bMass>>histoN(36, 5, 5.4)", '%s & %s & %s' % (num, binR, aux))
+        tree.Draw("bMass>>histoD(36, 5, 5.4)", '%s & %s & %s' % (den, binR, aux))
 
         histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
 
         ## fit the histos
-        histoN.Fit(fitFuncN, "RIMQ") ; histoN.Fit(fitFuncN, "RIMQ")
+        histoN.Fit(fitFuncN, "RIMQ") ; histoN.Fit(fitFuncN, "RIMQ") ; setBackgdParams(backgdN, fitFuncN) ; c1.Update()
         import pdb ; pdb.set_trace()
-        histoD.Fit(fitFuncD, "RIMQ") ; histoD.Fit(fitFuncD, "RIMQ")
+        histoD.Fit(fitFuncD, "RIMQ") ; histoD.Fit(fitFuncD, "RIMQ") ; setBackgdParams(backgdD, fitFuncD) ; c1.Update()
         import pdb ; pdb.set_trace()
 
         ## update the fit function to the fit panel results
