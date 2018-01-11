@@ -30,13 +30,19 @@ def gauss (x, norm, mean, sigma):
 def pol1 (x, a, b):
     return a + x*b
 
+def pol2 (x, a, b, c):
+    return a*x*x + pol1(x, b, c)
+
+def pol3 (x, a, b, c, d):
+    return a*x*x*x + pol2(x, b, c, d)
+
 ## functions used for fit
 def fitFunc (x, par):
-    return gauss(x[0], par[0], par[1], par[2]) + gauss(x[0], par[3], par[4], par[5]) + pol1(x[0], par[6], par[7])
+    return gauss(x[0], par[0], par[1], par[2]) + pol2(x[0], par[3], par[4], par[5])
 
 ## get bin interval condition
 def BinRange(ind, bins, var):
-    return 'abs(ds_%s) >= %s && abs(ds_%s) <= %s' % (var, bins[ind], var, bins[ind+1])
+    return 'abs(%s) >= %s && abs(%s) <= %s' % (var, bins[ind], var, bins[ind+1])
 
 def getBinRange (i, bins, sep = ','):
     down =  str(bins[i])
@@ -45,31 +51,38 @@ def getBinRange (i, bins, sep = ','):
 
 def SetParameters(fitFunc, setName = False):
     fitFunc.SetParameter(0, 2000.)  ; fitFunc.SetParLimits(0, 0, 10000)    ## norm gaus1
-    fitFunc.SetParameter(1, 5.28 )  ; fitFunc.SetParLimits(1, 5.27, 5.29)  ## mean gaus1
-    fitFunc.SetParameter(2, 0.001 ) ; fitFunc.SetParLimits(2, 0.0001, 0.02)## sigm gaus1
-    fitFunc.SetParameter(3, 500. ) #; fitFunc.SetParLimits(6, 0, 2000)     ## norm pol1
-    fitFunc.SetParameter(4, -1000) #; fitFunc.SetParLimits(7, -5000, 5000) ## ang. pol1
-
+    fitFunc.SetParameter(1, 5.28 )  ; fitFunc.SetParLimits(1, 5.2, 5.5)    ## mean gaus1
+    fitFunc.SetParameter(2, 0.05 )  ; fitFunc.SetParLimits(2, 0.0001, 0.2) ## sigm gaus1
+    #fitFunc.SetParameter(3, 100 )  ; fitFunc.SetParLimits(3, 0, 10000)  
+    #fitFunc.SetParameter(4, 5.28)   ; fitFunc.SetParLimits(4, 5.2, 5.5)
+    #fitFunc.SetParameter(5, 0.05)   ; fitFunc.SetParLimits(5, 0.02, 0.2)
+    #fitFunc.SetParameter(6, 1000)   #; 
+    #fitFunc.SetParameter(7, 200)    #; 
+    #fitFunc.SetParameter(8, -200)   #; 
+    
     if setName: fitFunc.SetParName(0, 'N_{1}')    
-    if setName: fitFunc.SetParName(1, '#mu_{1}') 
+    if setName: fitFunc.SetParName(1, '#mu_{1}')  
     if setName: fitFunc.SetParName(2, '#sigma_{1}')
-    if setName: fitFunc.SetParName(3, 'q')        
-    if setName: fitFunc.SetParName(4, 'm')           
+    if setName: fitFunc.SetParName(3, 'a')              
+    if setName: fitFunc.SetParName(4, 'b')              
+    if setName: fitFunc.SetParName(5, 'c')              
 
 ## some objects
-inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016.root')
-tree      = inFile.Get("tree")
-outFile   = ROOT.TFile.Open('eff_from_ds.root', 'RECREATE')
+inFile    = ROOT.TFile.Open('/afs/cern.ch/work/l/lguzzi/samples/bp_0p1stat.root')
+tree      = inFile.Get("mTree")
+outFile   = ROOT.TFile.Open('0p1stat_highLumi.root', 'RECREATE')
 
 ## json output
 jsonStruc = OrderedDict()
-outJson   = open('eff_from_ds.json', 'w')
+outJson   = open('0p1stat_highLumi.json', 'w')
 
 ## binning
-ptBins  = np.array( [8, 15 , 35, 1000])
-etaBins = np.array( [0, 0.7, 1.5])
-varList = [ ('pt' , ptBins ),
-            ('eta', etaBins),
+ptBins  = np.array( [5, 15 , 35, 1000])
+etaBins = np.array( [0, 0.7, 1.5, 2.4])
+lumiBins= np.array( [2500, 5000, 7500, 10000])
+varList = [ #('bp_pt' , ptBins ),
+            #('bp_eta', etaBins),
+            #('iLumi', lumiBins),
             ('pt_eta', (ptBins, etaBins))
 ]
 
@@ -81,9 +94,10 @@ effGraphs = [ptGraph, etaGraph]
 ## event selection
 ##      run > 274954 all stat with tau trigger
 ##      run > 278802 final F + GH
-run = 'run > 274954'
-den = 'ds_hasphi & mu1_muonid_soft & mu2_muonid_soft & sv_prob>0.1 & sv_ls>2 & sv_cos>0.999 & hlt_dimuon0_phi_barrel & pi_pt>1.2 & ds_pt>8'
-num = '%s & hlt_doublemu3_trk_tau3mu' % den
+## see test/readTree_Bp.C from https://github.com/sarafiorendi/MuMuTrkHLT/tree/tau3mu
+aux = 'iLumi > 8000'
+den = '1'
+num = '%s && pass' % den 
 
 ## 2D eff
 eff_2D = ROOT.TH2F('2Deff', '', len(ptBins)-1, 0, len(ptBins)-1, len(etaBins)-1, 0, len(etaBins)-1)
@@ -96,21 +110,21 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
     for i in range( len(bins1)-1):
         ## fitfunctions
-        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 1.8, 2.02, 8)
-        fitFuncD = ROOT.TF1('fitFden', fitFunc, 1.8, 2.10, 8)
+        fitFuncN = ROOT.TF1('fitFnum', fitFunc, 5.1, 5.4, 6 )
+        fitFuncD = ROOT.TF1('fitFden', fitFunc, 5.1, 5.4, 6 )
         SetParameters (fitFuncN, setName = True)
         SetParameters (fitFuncD, setName = True)
 
         ##get the bin range
         if is2D:
-            var1 = varName.split('_')[0]
-            var2 = varName.split('_')[1]
+            var1 = 'bp_'+varName.split('_')[0]
+            var2 = 'bp_'+varName.split('_')[1]
             binR = '%s & %s' % (BinRange(i, bins1, var1), BinRange(indx, bins2, var2))
         else: binR = BinRange(i, bins1, varName)
         
         ## get the histos
-        tree.Draw("ds_mass>>histoN(40, 2.8, 3.2)", '%s & %s & %s' % (num, binR, run))
-        tree.Draw("ds_mass>>histoD(40, 2.8, 3.2)", '%s & %s & %s' % (den, binR, run))
+        tree.Draw("bMass>>histoN(28, 5.1, 5.4)", '%s & %s & %s' % (num, binR, aux))
+        tree.Draw("bMass>>histoD(28, 5.1, 5.4)", '%s & %s & %s' % (den, binR, aux))
 
         histoN = ROOT.gDirectory.Get('histoN') ; histoN.SetName('bin%s NUM' % (i))
         histoD = ROOT.gDirectory.Get('histoD') ; histoD.SetName('bin%s DEN' % (i))
@@ -131,14 +145,14 @@ def getEff( varName, bins, is2D = False, indx = -1):
 
         ## get the integral
         intD = GetGausIntegral( fitFuncD.GetParameter(0), fitFuncD.GetParameter(2),
-                                fitFuncD.GetParError (0), fitFuncD.GetParError (2)) +\
-               GetGausIntegral( fitFuncD.GetParameter(3), fitFuncD.GetParameter(5),
-                                fitFuncD.GetParError (3), fitFuncD.GetParError (5))
+                                fitFuncD.GetParError (0), fitFuncD.GetParError (2))
+               #GetGausIntegral( fitFuncD.GetParameter(4), fitFuncD.GetParameter(6),
+               #                 fitFuncD.GetParError (4), fitFuncD.GetParError (6))
 
         intN = GetGausIntegral( fitFuncN.GetParameter(0), fitFuncN.GetParameter(2),
-                                fitFuncN.GetParError (0), fitFuncN.GetParError (2)) +\
-               GetGausIntegral( fitFuncN.GetParameter(3), fitFuncN.GetParameter(5),
-                                fitFuncN.GetParError (3), fitFuncN.GetParError (5))
+                                fitFuncN.GetParError (0), fitFuncN.GetParError (2))
+               #GetGausIntegral( fitFuncN.GetParameter(4), fitFuncN.GetParameter(6),
+               #                 fitFuncN.GetParError (4), fitFuncN.GetParError (6))
         ## get the efficiency
         eff = intN[0]/intD[0]
         err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1])
