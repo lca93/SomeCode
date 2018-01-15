@@ -14,10 +14,10 @@ def getXvalue(label):
     return 0.5*( float( label.split(',')[0]) + float( label.split(',')[1]))
 
 def getXerror(index, keys):
-    return getXvalue(keys[index]) - getXvalue(keys[index-1]) + getXerror(index-1, keys) if index != 0  else getXvalue(keys[index])
+    return getXvalue(keys[index]) - getXvalue(keys[index-1]) - getXerror(index-1, keys) if index != 0  else getXvalue(keys[index])
 
 period = str(sys.argv[1])
-mainKey= 'pt_eta'
+mainKey= 'bp_pt__VS__bp_eta'
 etaKeys= [  '0.0,0.7',
             '0.7,1.5',
             '1.5,2.4',
@@ -30,7 +30,7 @@ ptKeys = [  '5,15'   ,
 rFile = ROOT.TFile('%s.root' % period, 'RECREATE')
 
 lowLumi = open('results/%s_lowLumi.json'    % period, 'r')
-higLumi = open('results/%s_highLumi.json'   % period, 'r')
+higLumi = open('results/%s_higLumi.json'    % period, 'r')
 midLumi = open('results/%s_midLumi.json'    % period, 'r')
 
 jsonLowLumi = json.load(lowLumi, object_pairs_hook=OrderedDict)[mainKey]
@@ -66,9 +66,9 @@ for jj, ee in enumerate(etaKeys):
 
     leg = ROOT.TLegend(0.7, 0.25, 0.85, 0.15)
     
-    leg.AddEntry(lowGraph, 'iLumi < 4000', "lp")
+    leg.AddEntry(lowGraph, 'iLumi < 6000', "lp")
     leg.AddEntry(higGraph, 'iLumi > 8000', "lp")
-    leg.AddEntry(midGraph, 'iLumi in (4000, 8000)', "lp")
+    leg.AddEntry(midGraph, 'iLumi in (6000, 8000)', "lp")
 
     lowGraph.SetMarkerStyle(21)
     higGraph.SetMarkerStyle(21)

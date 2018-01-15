@@ -6,7 +6,7 @@ from collections import OrderedDict
 class TrgFitter ():
     def __init__(self, pdfNum, pdfDen, tree, mainVar, den, num, rLo, rUp, nBins, oth = '1', fileName = 'outFile'):
         self.den = den
-        self.num = num
+        self.num = ' & '.join([num, den])
         self.oth = oth
         
         self.pdfNum = pdfNum
@@ -42,21 +42,16 @@ class TrgFitter ():
         self.integFuncIsSet = True
         self.integFunc = func
 
-    def SetParNames(self, numParNames, denParNames):
-        for i in range( len(numParNames)): self.pdfNum.SetParName(i, numParNames[i])
-        for i in range( len(denParNames)): self.pdfNum.SetParName(i, denParNames[i])
-
-    def SetParInitVals(self, numInitVals, denInitVals):
-        for i in range( len(numInitVals)): 
-            if not numInitVals[i] is None: self.pdfNum.SetParameter(i, numInitVals[i])
-        for i in range( len(denInitVals)): 
-            if not denInitVals[i] is None: self.pdfDen.SetParameter(i, denInitVals[i])
-
-    def SetParLimits(self, numParLims, denParLims):
-        for i in range( len(numParLims)): 
-            if not numParLims[i] is None: self.pdfNum.SetParLimits(i, numParLims[i][0], numParLims[i][1])
-        for i in range( len(numParLims)): 
-            if not denParLims[i] is None: self.pdfDen.SetParLimits(i, denParLims[i][0], denParLims[i][1])
+    def InitializeParameters(self, numPars, denPars):
+        for j in range( len(numPars)):
+            if not numPars[j][0] is None: self.pdfNum.SetParName(j, numPars[j][0])
+            if not numPars[j][1] is None: self.pdfNum.SetParameter(j, numPars[j][1])
+            if not numPars[j][2] is None: self.pdfNum.SetParLimits(j, numPars[j][2][0], numPars[j][2][1])
+        
+        for j in range( len(denPars)):
+            if not numPars[j][0] is None: self.pdfDen.SetParName(j, denPars[j][0])
+            if not numPars[j][1] is None: self.pdfDen.SetParameter(j, denPars[j][1])
+            if not numPars[j][2] is None: self.pdfDen.SetParLimits(j, denPars[j][2][0], denPars[j][2][1])
 
     def getIntegral(self, func):
         return self.integFunc(func, self.nBins)
@@ -73,13 +68,11 @@ class TrgFitter ():
     def fitHisto(self, histo, func):
         for i in range (self.fitAttemptNo): 
             histo.Fit(func, self.fitOpt)
-            self.cvas.Update()
+        self.cvas.Update()
         if self.pdbFit: import pdb ; pdb.set_trace()
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
-
-    def writeObj(self, obj):
-        obj.Write()
+        return (func.GetParameters(), func.GetParErrors())
 
     def checkBeforeStart(self):
         if self.den        is None : print "Denominator not set"        ; return False
@@ -110,6 +103,8 @@ class TrgFitter ():
                     
                     self.jsonStruc[vv][self.getBinRange(j, self.varList[vv][1])] = OrderedDict()
                     self.jsonStruc[vv][self.getBinRange(j, self.varList[vv][1])] = self.getEff(varName = vv, bins = self.varList[vv], is2D = True, indx = j)
+
+        self.writeFiles()
  
     def getEff(self, varName, bins, is2D = False, indx = -1):
         jsonOut = OrderedDict()
@@ -126,16 +121,21 @@ class TrgFitter ():
             else: binR = self.binRange(i, bins1, varName)
             
             ## get the histos
-            histoN = self.getHistogram('histoN', '%s & %s & %s' % (self.num, binR, self.oth))
-            histoD = self.getHistogram('histoD', '%s & %s & %s' % (self.den, binR, self.oth))
+            histoN = self.getHistogram('bin%s NUM' % i, '%s & %s & %s' % (self.num, binR, self.oth))
+            histoD = self.getHistogram('bin%s DEN' % i, '%s & %s & %s' % (self.den, binR, self.oth))
 
             ## fit the histos
-            self.fitHisto( histoN, self.pdfNum)
-            self.fitHisto( histoD, self.pdfDen)
+            resNum = self.fitHisto( histoN, self.pdfNum)
+            resDen = self.fitHisto( histoD, self.pdfDen)
+            self.pdfNum.SetParameters( resNum[0]) ; self.pdfNum.SetParErrors(resNum[1])
+            self.pdfDen.SetParameters( resDen[0]) ; self.pdfDen.SetParErrors(resDen[1])
+
+            ## draw on a canvas
+            self.drawResults(histoN, self.pdfNum, histoD, self.pdfDen).Write()
 
             ## write in file
-            self.writeObj(histoN)
-            self.writeObj(histoD)
+            histoN.Write()
+            histoD.Write()
 
             ## get the integral
             intN = self.getIntegral(self.pdfNum)
@@ -151,6 +151,15 @@ class TrgFitter ():
             jsonOut[self.getBinRange(i, bins1)]['error'] = err
 
         return jsonOut
+
+    def drawResults(self, histoN, pdfN, histoD, pdfD):
+        outCvas = ROOT.TCanvas()
+        outCvas.Divide(2, 1)
+
+        outCvas.cd(1) ; histoN.Draw() ; pdfN.Draw('same')
+        outCvas.cd(2) ; histoD.Draw() ; pdfD.Draw('same')
+
+        return outCvas
 
     def binRange(self, ind, bins, var, absVal=True):
         return  'abs(%s) >= %s && abs(%s) <= %s' % (var, bins[ind], var, bins[ind+1]) if absVal else \

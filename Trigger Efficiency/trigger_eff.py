@@ -3,20 +3,20 @@ import json
 import math
 import numpy as np
 
-from classes.Tgr_fitter import TrgFitter 
+from classes.Trg_fitter import TrgFitter 
 
 ROOT.gStyle.SetOptFit(1111)
 ROOT.gStyle.SetOptStat(1000000001)
-ROOT.gROOT.SetBatch(ROOT.kTRUE)
+#ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
 def integFunc (func, binSize):
-    norm  = func.GetParameter(0)
-    sigma = func.GetParameter(2)
+    norm  = func.GetParameter(2)
+    sigma = func.GetParameter(4)
 
-    errNorm  = func.GetParError(0)
-    errSigma = func.GetParError(2)
+    errNorm  = func.GetParError(2)
+    errSigma = func.GetParError(4)
  
     area = norm * sigma * math.sqrt(2.*math.pi)/binSize
     error= (2.*math.pi) * ( (norm*errSigma)**2 + (sigma*errNorm)**2 ) / (binSize**2)
@@ -30,10 +30,10 @@ tree  = iFile.Get('mTree')
 ## fitter settings
 den = '1'
 num = 'pass'
-oth = 'run > 278810'
+oth = 'run < 278810 & iLumi < 6000'
 
 mainVar  = 'bMass'
-fileName = 'tempFile'
+fileName = 'BF_lowLumi'
 
 ## pdf's settings
 rLo = 5.1
@@ -42,20 +42,26 @@ nBins = 28
 
 ##pdf's declarations
 pdfSignalN = ROOT.TF1('pdfSignalN', 'gaus', rLo, rUp)
-pdfBackgdN = ROOT.TF1('pdfBackgdN', 'pol2', rLo, rUp)
+pdfBackgdN = ROOT.TF1('pdfBackgdN', 'pol1', rLo, rUp)
 pdfSignalD = ROOT.TF1('pdfSignalD', 'gaus', rLo, rUp)
-pdfBackgdD = ROOT.TF1('pdfBackgdD', 'pol2', rLo, rUp)
+pdfBackgdD = ROOT.TF1('pdfBackgdD', 'pol1', rLo, rUp)
 
 pdfN = ROOT.TF1('NumPDF', 'pdfSignalN+pdfBackgdN', rLo, rUp)
 pdfD = ROOT.TF1('DenPDF', 'pdfSignalD+pdfBackgdD', rLo, rUp)
 
-numParNames = ('a' , 'b' , 'c' , 'N'          , '#mu'         , '#sigma')
-numInitVals = (None, None, None, 10000        , 5.27          , 0.02          )
-numParLims  = (None, None, (0, 10000), (0, 100000)  , (5.270, 5.290), (0.0001, 0.05))
+numPars = [ ('a'     , None     , None)             ,
+            ('b'     , None     , None)             ,
+            ('N'     , 10000    , (0, 100000))      ,
+            ('#mu'   , 5.28     , (5.275, 5.290))   ,
+            ('#sigma', 0.02     , (0.0001, 0.1 ))   ,
+]
 
-denParNames = ('a' , 'b' , 'c' , 'N'          , '#mu'         , '#sigma')
-denInitVals = (None, None, None, 10000        , 5.27          , 0.02)
-denParLims  = (None, None, (0, 10000), (0, 100000)  , (5.270, 5.290), (0.0001, 0.05))
+denPars = [ ('a'     , None     , None)             ,
+            ('b'     , None     , None)             ,
+            ('N'     , 10000    , (0, 100000))      ,
+            ('#mu'   , 5.28     , (5.275, 5.290))   ,
+            ('#sigma', 0.02     , (0.0001, 0.1 ))   ,
+]
 
 ptBins  = np.array( [5, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5, 2.4])
@@ -76,25 +82,15 @@ fitter = TrgFitter( pdfNum   =  pdfN    ,
 
 fitter.SetIntegratingFunction(integFunc)
 
-fitter.AddBinnedVar('bp_pt'             , ptBins            )
-fitter.AddBinnedVar('bp_eta'            , etaBins           )
-fitter.AddBinnedVar('iLumi'             , lumiBins          )
+#fitter.AddBinnedVar('bp_pt'             , ptBins            )
+#fitter.AddBinnedVar('bp_eta'            , etaBins           )
+#fitter.AddBinnedVar('iLumi'             , lumiBins          )
 fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetParNames( numParNames = numParNames,
-                    denParNames = denParNames
-)
-fitter.SetParInitVals( numInitVals = numInitVals,
-                       denInitVals = denInitVals
-)
-fitter.SetParLimits( numParLims = numParLims,
-                     denParLims = denParLims
-)
+fitter.InitializeParameters( numPars = numPars, denPars = denPars)
 
-fitter.SetOptions(pdbFit = False)
+fitter.SetOptions(fitAttNo = 2)
 
 
 
 fitter.CalculateEfficiency()
-
-
