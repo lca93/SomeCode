@@ -3,18 +3,23 @@ import json
 
 from collections import OrderedDict
 
-def getXvalue(label):
+def getXvalue(label, idx, var):
+    if var == 'BF': xVals = [4662, 6815, 8510, 10532]   ## BF
+    if var == 'GH': xVals = [5272, 6892, 8883, 10873]   ## GH
+    xVals = [4714, 6822, 8751, 10712]   ## allStat
     return 0.5*( float( label.split(',')[0]) + float( label.split(',')[1]))
+    return xVals[idx]
 
-def getXerror(index, keys):
+def getXerror(index, keys, var):
+    return 0
     keys = [str(kk) for kk in keys]
-    ret =  getXvalue(keys[index]) - getXvalue(keys[index-1]) - getXerror(index-1, keys) if index != 0  else getXvalue(keys[index])
+    ret =  getXvalue(keys[index], index, var) - getXvalue(keys[index], index-1, var) - getXerror(index-1, keys, var) if index != 0  else getXvalue(index, var)
     return ret
 
-mainKey = 'iLumi'
+mainKey = 'bp_eta'
 
-bfFile = open('results/BF.json', 'r')
-ghFile = open('results/GH.json', 'r')
+bfFile = open('results/BF_eta.json', 'r')
+ghFile = open('results/GH_eta.json', 'r')
 
 rFile = ROOT.TFile('effVSilumi.root', 'RECREATE') ; rFile.cd()
 
@@ -33,13 +38,13 @@ ghGraph.SetLineColor(ROOT.kBlue)
 
 for jj, kk in enumerate(jsonBF.keys()):
     kk = str(kk)
-    bfGraph.SetPoint(jj, getXvalue(kk), jsonBF[kk]['value'])
-    bfGraph.SetPointError(jj, getXerror(jj, jsonBF.keys()), jsonBF[kk]['error'])
+    bfGraph.SetPoint(jj, getXvalue(kk, jj, 'BF'), jsonBF[kk]['value'])
+    bfGraph.SetPointError(jj, getXerror(jj, jsonBF.keys(), 'BF'), jsonBF[kk]['error'])
 
 for jj, kk in enumerate(jsonGH.keys()):
     kk = str(kk)
-    ghGraph.SetPoint(jj, getXvalue(kk), jsonGH[kk]['value'])
-    ghGraph.SetPointError(jj, getXerror(jj, jsonGH.keys()), jsonGH[kk]['error'])
+    ghGraph.SetPoint(jj, getXvalue(kk, jj, 'GH'), jsonGH[kk]['value'])
+    ghGraph.SetPointError(jj, getXerror(jj, jsonGH.keys(), 'GH'), jsonGH[kk]['error'])
 
 leg = ROOT.TLegend(0.7, 0.25, 0.85, 0.15)
     
