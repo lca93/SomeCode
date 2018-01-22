@@ -23,15 +23,7 @@ def integFunc(func, binSize):
                         eNorm   = func.GetParError(0)   ,
                         eSigma  = func.GetParError(2)   ,
                         binSize = binSize               ,
-    ) +\
-            gaussInteg( norm    = func.GetParameter(3)  ,
-                        sigma   = func.GetParameter(5)  ,
-                        eNorm   = func.GetParError(3)   ,
-                        eSigma  = func.GetParError(5)   ,
-                        binSize = binSize               ,
     )
-
-
 
 
 iFile = ROOT.TFile('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016_skimmed.root')
@@ -44,7 +36,7 @@ num = 'hlt_doublemu3_trk_tau3mu'
 oth = 'run > 278802'
 
 mainVar  = 'ds_mass'
-fileName = 'test_highRun'
+fileName = 'above_278802'
 
 ## pdf's settings
 rLo = 1.80
@@ -52,36 +44,37 @@ rUp = 2.1
 nBins = 28
 
 ##pdf's declarations
-pdfSignalN = ROOT.TF1('pdfSignalN', 'gaus(0)+gaus(3)', rLo, rUp)
-pdfBackgdN = ROOT.TF1('pdfBackgdN', 'pol1', rLo, rUp)
-pdfSignalD = ROOT.TF1('pdfSignalD', 'gaus(0)+gaus(3)', rLo, rUp)
-pdfBackgdD = ROOT.TF1('pdfBackgdD', 'pol1', rLo, rUp)
+pdfSignalN = ROOT.TF1('pdfSignalN', 'gaus', rLo, rUp-0.08)
+pdfBackgdN = ROOT.TF1('pdfBackgdN', 'gaus(0)+pol1(3)', rLo, rUp-0.08)
+pdfSignalD = ROOT.TF1('pdfSignalD', 'gaus', rLo, rUp)
+pdfBackgdD = ROOT.TF1('pdfBackgdD', 'gaus(0)+pol1(3)', rLo, rUp)
 
-pdfN = ROOT.TF1('NumPDF', 'pdfSignalN+pdfBackgdN', rLo, rUp)
+pdfN = ROOT.TF1('NumPDF', 'pdfSignalN+pdfBackgdN', rLo, rUp-0.08)
 pdfD = ROOT.TF1('DenPDF', 'pdfSignalD+pdfBackgdD', rLo, rUp)
 
 numPars = [ 
             ('N_{1}'     , 10000    , (0, 100000))      ,
             ('#mu_{1}'   , 1.97     , (1.93, 2.00))     ,
-            ('#sigma_{1}', 0.02     , (0.0001, 0.1 ))   ,
-            ('N_{2}'     , 1000     , (0, 100000))      ,
-            ('#mu_{2}'   , 1.87     , (1.93, 1.90))     ,
-            ('#sigma_{2}', 0.02     , (0.0001, 0.1 ))   ,
+            ('#sigma_{1}', 0.02     , (0.01, 0.1 ))   ,
             ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
+            ('N_{2}'     , 1000     , (0, 100000))      ,
+            ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
+            ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
 ]
 
 denPars = [ 
             ('N_{1}'     , 10000    , (0, 100000))      ,
             ('#mu_{1}'   , 1.97     , (1.93, 2.00))     ,
-            ('#sigma_{1}', 0.02     , (0.0001, 0.1 ))   ,
-            ('N_{2}'     , 1000     , (0, 100000))      ,
-            ('#mu_{2}'   , 1.87     , (1.93, 1.90))     ,
-            ('#sigma_{2}', 0.02     , (0.0001, 0.1 ))   ,
+            ('#sigma_{1}', 0.02     , (0.01, 0.1 ))   ,
             ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
+            ('N_{2}'     , 1000     , (0, 100000))      ,
+            ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
+            ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
 ]
 
+wholeStat = np.array([0, 1000000])
 ptBins  = np.array( [8, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5])
 lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
@@ -101,10 +94,11 @@ fitter = TrgFitter( pdfNum   =  pdfN    ,
 
 fitter.SetIntegratingFunction(integFunc)
 
-fitter.AddBinnedVar('ds_pt'             , ptBins            )
-fitter.AddBinnedVar('ds_eta'            , etaBins           )
+#fitter.AddBinnedVar('ds_pt'              , wholeStat         ) ## whole stat test
+#fitter.AddBinnedVar('ds_pt'             , ptBins            )
+#fitter.AddBinnedVar('ds_eta'            , etaBins           )
 #fitter.AddBinnedVar('iLumi'             , lumiBins          )
-#fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
+fitter.AddBinnedVar('ds_pt__VS__ds_eta' , (ptBins, etaBins) )
 
 fitter.InitializeParameters( numPars = numPars, denPars = denPars)
 

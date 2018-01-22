@@ -113,8 +113,8 @@ def getSFs_2D(daDir, mcDir, bins, var, outFile):
     absetaBins = bins[1]
 
     ## get list of keys
-    keysMC = list(daDir.GetListOfKeys())
-    keysDA = list(mcDir.GetListOfKeys())
+    keysDA = list(daDir.GetListOfKeys())
+    keysMC = list(mcDir.GetListOfKeys())
 
     ## the lists will contain the graphs 
     ptGraphList = [
@@ -194,9 +194,13 @@ def getSFs_2D(daDir, mcDir, bins, var, outFile):
     c2 = ROOT.TCanvas()
     c3 = ROOT.TCanvas()
 
-    c1.cd() ; SFsHisto.Draw("colz2 text error")
-    c2.cd() ; daEHisto.Draw("colz2 text error")
-    c3.cd() ; mcEHisto.Draw("colz2 text error")
+    SFsHisto.GetZaxis().SetRangeUser(-.01, 2)
+    daEHisto.GetZaxis().SetRangeUser(-.01, 2)
+    mcEHisto.GetZaxis().SetRangeUser(-.01, 2)
+
+    c1.cd() ; SFsHisto.Draw("colz text error")
+    c2.cd() ; daEHisto.Draw("colz text error")
+    c3.cd() ; mcEHisto.Draw("colz text error")
 
     c1.Print("%s/Ratio_%s.pdf"    % (DIR, str(sys.argv[1])), "pdf") ; c1.Write()
     c2.Print("%s/DataEff_%s.pdf"  % (DIR, str(sys.argv[1])), "pdf") ; c2.Write()

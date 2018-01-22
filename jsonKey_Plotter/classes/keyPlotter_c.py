@@ -36,8 +36,8 @@ class keyPlotter ():
             self.keyList1D.append(keyName)
             self.xArray[keyName] = xArray
 
-    def SetOptions(self, skipXerror = True, useXposArray = False, keySeparator = ','):
-        self.skipXerror   = skipXerror
+    def SetOptions(self, useXerror = True, useXposArray = False, keySeparator = ','):
+        self.useXerror    = useXerror
         self.useXposArray = useXposArray
         self.keySeparator = keySeparator
 
@@ -46,8 +46,8 @@ class keyPlotter ():
         return 0.5*(float( key.split( self.keySeparator)[0]) + float( key.split( self.keySeparator)[1]))
 
     def getXerror(self, key, idx):
-        if self.skipXerror: return 0
-        return 0
+        if not self.useXerror: return 0
+        return 0.5*(float( key.split( ',')[1]) - float( key.split(',')[0]))        
 
     def plotOnCanvas(self, obj, opt = ''):
         cVas = ROOT.TCanvas() ; cVas.cd()

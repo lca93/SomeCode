@@ -23,6 +23,10 @@ def integFunc (func, binSize):
 
     return np.array([area, error])
 
+def bUpFunc (pdf, bpdf):
+    bpdf.SetParameter(0, pdf.GetParameter(0))
+    bpdf.SetParameter(1, pdf.GetParameter(1))
+
 iFile = ROOT.TFile('/afs/cern.ch/work/l/lguzzi/samples/bp_allstat.root')
 tree  = iFile.Get('mTree')
 
@@ -30,10 +34,10 @@ tree  = iFile.Get('mTree')
 ## fitter settings
 den = '1'
 num = 'pass'
-oth = 'run < 278810'
+oth = '1'
 
 mainVar  = 'bMass'
-fileName = 'BF_test'
+fileName = 'allStat_eta'
 
 ## pdf's settings
 rLo = 5.1
@@ -85,14 +89,17 @@ fitter = TrgFitter( pdfNum   =  pdfN    ,
                     fileName =  fileName
         )
 
-fitter.SetIntegratingFunction(integFunc)
-
-fitter.AddBinnedVar('bp_pt'             , ptBins            )
-#fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
+#fitter.AddBinnedVar('bp_pt'             , ptBins            )
+fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
 #fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
+
+## fitter setup
 fitter.InitializeParameters( numPars = numPars, denPars = denPars)
+fitter.SetBackgroundPdf( bpdfNum = pdfBackgdN, bpdfDen = pdfBackgdD)
+fitter.SetBackgroundUpdateFunction( func = bUpFunc)
+fitter.SetIntegratingFunction(func = integFunc)
 
 fitter.SetOptions(fitAttNo = 2)
 
