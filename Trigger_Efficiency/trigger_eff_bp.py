@@ -33,7 +33,7 @@ num = 'pass'
 oth = 'run < 278810'
 
 mainVar  = 'bMass'
-fileName = 'BF_eta'
+fileName = 'BF_test'
 
 ## pdf's settings
 rLo = 5.1
@@ -53,21 +53,24 @@ numPars = [ ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
             ('N'     , 10000    , (0, 100000))      ,
             ('#mu'   , 5.28     , (5.25, 5.30))   ,
-            ('#sigma', 0.02     , (0.0001, 0.1 ))   ,
+            ('#sigma', 0.02     , (0.005, 0.1 ))   ,
 ]
 
 denPars = [ ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
             ('N'     , 10000    , (0, 100000))      ,
-            ('#mu'   , 5.28     , (5.25, 5.30))   ,
-            ('#sigma', 0.02     , (0.0001, 0.1 ))   ,
+            ('#mu'   , 5.28     , (5.25, 5.30))     ,
+            ('#sigma', 0.02     , (0.005, 0.1 ))   ,
 ]
 
 ptBins  = np.array( [5, 15 , 35, 1000])
-#etaBins = np.array( [0, 0.7, 1.5, 2.4])
-etaBins = np.array( [0, 0.3, 0.6, 0.9, 1.2, 1.5, 1.8, 2.1, 2.4])
+etaBins = np.array( [0, 0.7, 1.5, 2.4])
 lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
-#lumiBins= np.array( [0, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000,20000])
+
+etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.4])
+etaBinsGH = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.4])
+lumiBinsGH= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
+lumiBinsBF= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 
 fitter = TrgFitter( pdfNum   =  pdfN    ,   
                     pdfDen   =  pdfD    , 
@@ -84,9 +87,9 @@ fitter = TrgFitter( pdfNum   =  pdfN    ,
 
 fitter.SetIntegratingFunction(integFunc)
 
-#fitter.AddBinnedVar('bp_pt'             , ptBins            )
-fitter.AddBinnedVar('bp_eta'            , etaBins           )
-#fitter.AddBinnedVar('iLumi'             , lumiBins          )
+fitter.AddBinnedVar('bp_pt'             , ptBins            )
+#fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
+#fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
 fitter.InitializeParameters( numPars = numPars, denPars = denPars)
