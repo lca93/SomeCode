@@ -12,6 +12,9 @@ class TrgFitter ():
         self.pdfNum = pdfNum
         self.pdfDen = pdfDen
 
+        self.bpdfNum = None
+        self.bpdfDen = None
+
         self.fileName = fileName
 
         self.tree = tree
@@ -25,7 +28,8 @@ class TrgFitter ():
 
         self.jsonStruc = OrderedDict()
 
-        self.integFuncIsSet = False
+        self.integFuncIsSet  = False
+        self.backUpFuncIsSet = False
 
         self.rLo  = rLo
         self.rUp  = rUp
@@ -38,9 +42,20 @@ class TrgFitter ():
         self.fitAttemptNo   = fitAttNo
         self.pdbFit         = pdbFit
 
+    def SetBackgroundPdf(self, bpdfNum, bpdfDen):
+        self.bpdfNum = bpdfNum
+        self.bpdfDen = bpdfDen
+
+        self.bpdfNum.SetLineStyle(ROOT.kDashed)
+        self.bpdfDen.SetLineStyle(ROOT.kDashed)
+
     def SetIntegratingFunction(self, func):
         self.integFuncIsSet = True
         self.integFunc = func
+
+    def SetBackgroundUpdateFunction(self, func):
+        self.backUpFuncIsSet = True
+        self.backUpFunc = func
 
     def InitializeParameters(self, numPars, denPars):
         for j in range( len(numPars)):
@@ -56,6 +71,11 @@ class TrgFitter ():
     def getIntegral(self, func):
         return self.integFunc(func, self.nBins)
 
+    def updateBackground(self, pdf, bpdf):
+        if not self.backUpFuncIsSet: return False
+        self.backUpFunc(pdf, bpdf)
+        return True
+
     def AddBinnedVar(self, var, bins): 
         self.varList[var] = bins
 
@@ -65,13 +85,16 @@ class TrgFitter ():
         cAux.Close() ; self.cvas.cd()
         return ROOT.gDirectory.Get(name)
 
-    def fitHisto(self, histo, func):
+    def fitHisto(self, histo, func, bpdf = None):
         for i in range (self.fitAttemptNo): 
             histo.Fit(func, self.fitOpt)
         self.cvas.Update()
         if self.pdbFit: import pdb ; pdb.set_trace()
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
+
+        if not bpdf is None and self.integFuncIsSet: self.updateBackground(func, bpdf)
+
         return (func.GetParameters(), func.GetParErrors())
 
     def checkBeforeStart(self):
@@ -84,6 +107,8 @@ class TrgFitter ():
         if self.rUp        is None : print "Upper limit not set"        ; return False
         if self.nBins      is None : print "Number of bins not set"     ; return False
         if self.mainVar    is None : print "Main variable not set"      ; return False
+        if not self.integFuncIsSet : print "No function for integration is set" ; return False
+        if not self.backUpFuncIsSet: print "No function to plot background is set, skipping"
         if len(self.varList) == 0  : print "No binned variable set"     ; return False    
 
         return True
@@ -125,13 +150,13 @@ class TrgFitter ():
             histoD = self.getHistogram('bin%s DEN' % i, '%s & %s & %s' % (self.den, binR, self.oth))
 
             ## fit the histos
-            resNum = self.fitHisto( histoN, self.pdfNum)
-            resDen = self.fitHisto( histoD, self.pdfDen)
+            resNum = self.fitHisto( histoN, self.pdfNum, self.bpdfNum)
+            resDen = self.fitHisto( histoD, self.pdfDen, self.bpdfDen)
             self.pdfNum.SetParameters( resNum[0]) ; self.pdfNum.SetParErrors(resNum[1])
             self.pdfDen.SetParameters( resDen[0]) ; self.pdfDen.SetParErrors(resDen[1])
 
             ## draw on a canvas
-            self.drawResults(histoN, self.pdfNum, histoD, self.pdfDen).Write()
+            self.drawResults(histoN, histoD).Write()
 
             ## write in file
             histoN.Write()
@@ -152,12 +177,12 @@ class TrgFitter ():
 
         return jsonOut
 
-    def drawResults(self, histoN, pdfN, histoD, pdfD):
+    def drawResults(self, histoN, histoD):
         outCvas = ROOT.TCanvas()
         outCvas.Divide(2, 1)
 
-        outCvas.cd(1) ; histoN.Draw() ; pdfN.Draw('same')
-        outCvas.cd(2) ; histoD.Draw() ; pdfD.Draw('same')
+        outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.Draw('same') ; self.bpdfNum.Draw("same")
+        outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.Draw('same') ; self.bpdfDen.Draw("same")
 
         return outCvas
 
