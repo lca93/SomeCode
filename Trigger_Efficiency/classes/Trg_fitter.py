@@ -1,6 +1,8 @@
 import ROOT
 import json
 import math
+import numpy
+
 from collections import OrderedDict
 from fitterPdf_c import fitterPDF
 
@@ -71,16 +73,18 @@ class TrgFitter ():
 
     def fitHisto(self, histo, func, bpdf = None):
         for i in range (self.fitAttemptNo):
-            histo.Fit(func, self.fitOpt)
+            fitRes = histo.Fit(func, self.fitOpt)
         self.cvas.Update()
         if self.pdbFit: import pdb ; pdb.set_trace()
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
 
-        parv = [func.GetParameter(ii) for ii in range( func.GetNpar())]
-        pare = [func.GetParError(ii)  for ii in range( func.GetNpar())]
+        parV = [func.GetParameter(ii) for ii in range( func.GetNpar())]
+        parE = [func.GetParError(ii)  for ii in range( func.GetNpar())]
+        covM = ROOT.TVirtualFitter.GetFitter().GetCovarianceMatrix() 
+        covM = numpy.asarray([covM[mm] for mm in range( func.GetNpar()**2)])
 
-        return (parv, pare)
+        return (parV, parE, covM)
 
     def checkBeforeStart(self):
         if self.den        is None : print "Denominator not set"        ; return False
@@ -117,21 +121,34 @@ class TrgFitter ():
             resNum = self.fitHisto( histoN, self.pdfNum.GetTotPDF()) ; self.pdfNum.UpdatePDFParameters(resNum[0], resNum[1])
             resDen = self.fitHisto( histoD, self.pdfDen.GetTotPDF()) ; self.pdfDen.UpdatePDFParameters(resDen[0], resDen[1])
 
+            ## set the covariance matrix
+            self.pdfNum.SetCovMatrix( resNum[2])
+            self.pdfDen.SetCovMatrix( resDen[2])
+
             ## draw on a canvas
             self.drawResults(histoN, histoD).Write()
+
+            ## set usefull params
+            parNum = numpy.asarray([self.pdfNum.GetSigPDF().GetParameter(pp) for pp in range( self.pdfNum.GetSigPDF().GetNpar())])
+            parDen = numpy.asarray([self.pdfDen.GetSigPDF().GetParameter(pp) for pp in range( self.pdfDen.GetSigPDF().GetNpar())])
 
             ## write in file
             histoN.Write()
             histoD.Write()
 
+            binSize = (self.fitRange[1]-self.fitRange[0])/self.nBins
+
             ## get the integral
             intN = (    self.pdfNum.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
-                        self.pdfNum.GetSigPDF().IntegralError( self.fitRange[0], self.fitRange[1])**2
+                        (self.pdfNum.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1], 
+                                                                self.pdfNum.GetSigParList(), self.pdfNum.GetSigCovMatrix()
+                        )**2)/(binSize**2)
             )
             intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
-                        self.pdfDen.GetSigPDF().IntegralError( self.fitRange[0], self.fitRange[1])**2
+                        (self.pdfDen.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1],
+                                                                self.pdfDen.GetSigParList(), self.pdfDen.GetSigCovMatrix()
+                        )**2)/(binSize**2)
             )
-            import pdb ; pdb.set_trace()
 
             ## get the efficiency
             eff = intN[0]/intD[0]

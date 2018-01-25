@@ -1,4 +1,5 @@
 import ROOT
+import numpy
 from itertools import product
 
 class fitterPDF():
@@ -31,8 +32,32 @@ class fitterPDF():
     def GetBacPDF(self): return self.bacPDF
     def GetSigPDF(self): return self.sigPDF
     def GetTotPDF(self): return self.totPDF
+
+    def SetCovMatrix(self, covM):
+        self.covMatrixTot = covM
+        self.covMatrixSig = self.getComponentCovMatrix(self.sigPDF)
+        self.covMatrixBac = self.getComponentCovMatrix(self.bacPDF)
+
+    def GetTotCovMatrix(self): return self.covMatrixTot
+    def GetSigCovMatrix(self): return self.covMatrixSig
+    def GetBacCovMatrix(self): return self.covMatrixBac
+
+    def GetTotParList(self): return numpy.asarray([ self.totPDF.GetParameter(kk) for kk in range( self.totPDF.GetNpar())])
+    def GetSigParList(self): return numpy.asarray([ self.sigPDF.GetParameter(kk) for kk in range( self.sigPDF.GetNpar())])
+    def GetBacParList(self): return numpy.asarray([ self.bacPDF.GetParameter(kk) for kk in range( self.bacPDF.GetNpar())])
 ##
 ## private members
+    def getComponentCovMatrix(self, pdf):
+        covM = numpy.array([0]*(pdf.GetNpar()**2), 'float64')
+        pName_pdf = [ pdf.GetParName(i) for i in range( pdf.GetNpar()        )]
+
+        for ii, jj in product( range( self.totPDF.GetNpar()), range( self.totPDF.GetNpar())):
+            if self.totPDF.GetParName(ii) in pName_pdf and self.totPDF.GetParName(jj) in pName_pdf: 
+                index = pName_pdf.index( self.totPDF.GetParName(ii))*pdf.GetNpar() + pName_pdf.index( self.totPDF.GetParName(jj))
+                covM[index] = self.covMatrixTot[ii*self.totPDF.GetNpar()+jj]
+
+        return covM
+
     def generatePDF(self, func):
         if   isinstance(func, ROOT.TF1) : return func
         elif isinstance(func, str)      : return ROOT.TF1('tempPDF', func, self.fitRange[0], self.fitRange[1])
