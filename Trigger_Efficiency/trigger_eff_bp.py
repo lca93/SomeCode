@@ -78,6 +78,6 @@ fitter.AddBinnedVar('bp_pt'             , ptBins            )
 #fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetOptions(fitAttNo = 2)
+fitter.SetOptions(fitAttNo = 2, pdbFit = False)
 
 fitter.CalculateEfficiency()

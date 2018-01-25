@@ -66,9 +66,7 @@ class TrgFitter ():
 ## private members
 
     def getHistogram(self, name, cut):
-        cAux = ROOT.TCanvas() ; cAux.cd()
         self.tree.Draw("%s>>%s(%s, %s, %s)" % (self.mainVar, name, self.nBins, self.fitRange[0], self.fitRange[1]), cut)
-        cAux.Close() ; self.cvas.cd()
         return ROOT.gDirectory.Get(name)
 
     def fitHisto(self, histo, func, bpdf = None):
@@ -79,7 +77,10 @@ class TrgFitter ():
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
 
-        return (func.GetParameters(), func.GetParErrors())
+        parv = [func.GetParameter(ii) for ii in range( func.GetNpar())]
+        pare = [func.GetParError(ii)  for ii in range( func.GetNpar())]
+
+        return (parv, pare)
 
     def checkBeforeStart(self):
         if self.den        is None : print "Denominator not set"        ; return False
@@ -130,6 +131,7 @@ class TrgFitter ():
             intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
                         self.pdfDen.GetSigPDF().IntegralError( self.fitRange[0], self.fitRange[1])**2
             )
+            import pdb ; pdb.set_trace()
 
             ## get the efficiency
             eff = intN[0]/intD[0]
@@ -146,8 +148,8 @@ class TrgFitter ():
         outCvas = ROOT.TCanvas()
         outCvas.Divide(2, 1)
 
-        outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.Draw('same') ; self.bpdfNum.Draw("same")
-        outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.Draw('same') ; self.bpdfDen.Draw("same")
+        outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same')
+        outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same')
 
         return outCvas
 
