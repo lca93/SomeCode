@@ -33,8 +33,8 @@ class TrgFitter ():
 ## public members
 
     def SetPDFs(self, numPDFs, numPDFb, denPDFs, denPDFb, numParS, numParB, denParS, denParB):
-        self.pdfNum = fitterPDF(sigPDF = numPDFs, bacPDF=numPDFb, fitRange=self.fitRange)
-        self.pdfDen = fitterPDF(sigPDF = denPDFs, bacPDF=denPDFb, fitRange=self.fitRange)
+        self.pdfNum = fitterPDF(sigPDF = numPDFs, bacPDF=numPDFb, fitRange=self.fitRange, name = 'NUM')
+        self.pdfDen = fitterPDF(sigPDF = denPDFs, bacPDF=denPDFb, fitRange=self.fitRange, name = 'DEN')
 
         self.pdfNum.SetPdfPars(sigPars=numParS, bacPars=numParB)
         self.pdfDen.SetPdfPars(sigPars=denParS, bacPars=denParB)
@@ -71,7 +71,7 @@ class TrgFitter ():
         self.tree.Draw("%s>>%s(%s, %s, %s)" % (self.mainVar, name, self.nBins, self.fitRange[0], self.fitRange[1]), cut)
         return ROOT.gDirectory.Get(name)
 
-    def fitHisto(self, histo, func, bpdf = None):
+    def fitHisto(self, histo, func):
         for i in range (self.fitAttemptNo):
             fitRes = histo.Fit(func, self.fitOpt)
         self.cvas.Update()
@@ -139,16 +139,19 @@ class TrgFitter ():
             binSize = (self.fitRange[1]-self.fitRange[0])/self.nBins
 
             ## get the integral
-            intN = (    self.pdfNum.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
+            _intN = (    self.pdfNum.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
                         (self.pdfNum.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1], 
-                                                                self.pdfNum.GetSigParList(), self.pdfNum.GetSigCovMatrix()
+                                                                 self.pdfNum.GetSigParList(), self.pdfNum.GetSigCovMatrix()
                         )**2)/(binSize**2)
             )
-            intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
+            _intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
                         (self.pdfDen.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1],
-                                                                self.pdfDen.GetSigParList(), self.pdfDen.GetSigCovMatrix()
+                                                                 self.pdfDen.GetSigParList(), self.pdfDen.GetSigCovMatrix()
                         )**2)/(binSize**2)
             )
+
+            intN = self.__getEvt(self.pdfNum.GetSigPDF())
+            intD = self.__getEvt(self.pdfDen.GetSigPDF())
 
             ## get the efficiency
             eff = intN[0]/intD[0]
@@ -161,9 +164,22 @@ class TrgFitter ():
 
         return jsonOut
 
+    def __getEvt(self, pdf):
+        vNorm = pdf.GetParameter(0) ; eNorm = pdf.GetParError(0)
+        vSigm = pdf.GetParameter(2) ; eSigm = pdf.GetParError(2)
+        binSize = (self.fitRange[1] - self.fitRange[0]) / self.nBins
+
+        evt = abs(vNorm * vSigm * math.sqrt(2. * math.pi) / binSize)
+        err = (2.*math.pi) * ( (vNorm*eSigm)**2 + (vSigm*eNorm)**2 ) / (binSize**2)
+
+        return (evt, err)
+
     def drawResults(self, histoN, histoD):
         outCvas = ROOT.TCanvas()
         outCvas.Divide(2, 1)
+
+        self.pdfNum.GetBacPDF().SetLineStyle(ROOT.kDashed)
+        self.pdfDen.GetBacPDF().SetLineStyle(ROOT.kDashed)
 
         outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same')
         outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same')

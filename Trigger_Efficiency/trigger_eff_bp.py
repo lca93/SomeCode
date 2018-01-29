@@ -18,10 +18,10 @@ tree  = iFile.Get('mTree')
 ## fitter settings
 den = '1'
 num = 'pass'
-oth = 'run < 278810'
+oth = '1'
 
 mainVar  = 'bMass'
-fileName = 'test_b'
+fileName = 'allStat'
 
 ## pdf's settings
 fitRange = (5.1, 5.4)
@@ -48,8 +48,8 @@ ptBins  = np.array( [5, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5, 2.4])
 lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
 
-etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.4])
-etaBinsGH = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.4])
+etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
+etaBinsGH = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
 lumiBinsGH= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 lumiBinsBF= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 
@@ -73,11 +73,11 @@ fitter.SetPDFs( numPDFs = 'gaus',
                 denParB = denParB, 
 )
 
-fitter.AddBinnedVar('bp_pt'             , ptBins            )
-#fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
+#fitter.AddBinnedVar('bp_pt'             , ptBins            )
+fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
 #fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetOptions(fitAttNo = 2, pdbFit = False)
+fitter.SetOptions(fitAttNo = 2, pdbFit = True)
 
 fitter.CalculateEfficiency()

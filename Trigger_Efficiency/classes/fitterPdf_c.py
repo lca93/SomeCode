@@ -3,11 +3,13 @@ import numpy
 from itertools import product
 
 class fitterPDF():
-    def __init__(self, sigPDF, bacPDF, fitRange):
+    def __init__(self, sigPDF, bacPDF, fitRange, name):
         self.fitRange = fitRange
+        self.name = name
 
-        self.sigPDF = self.generatePDF( sigPDF) ; self.sigPDF.SetName('sigPDF') 
-        self.bacPDF = self.generatePDF( bacPDF) ; self.bacPDF.SetName('bacPDF')
+        self.sigPDF = ROOT.TF1('%s_sig' % self.name, sigPDF, self.fitRange[0], self.fitRange[1])
+        self.bacPDF = ROOT.TF1('%s_bac' % self.name, bacPDF, self.fitRange[0], self.fitRange[1])
+
 ##
 ## public members
     def SetPdfPars(self, sigPars, bacPars):
@@ -20,7 +22,19 @@ class fitterPDF():
             if not bacPars[j][1] is None: self.bacPDF.SetParameter(j, bacPars[j][1])
             if not bacPars[j][2] is None: self.bacPDF.SetParLimits(j, bacPars[j][2][0], bacPars[j][2][1])
 
-        self.totPDF = self.generatePDF( '%s+%s' % (self.sigPDF.GetName(), self.bacPDF.GetName())) ; self.totPDF.SetName('totPDF')
+        self.totPDF = ROOT.TF1('%s_tot' % self.name, '%s+%s' % (self.sigPDF.GetName(), self.bacPDF.GetName()), self.fitRange[0], self.fitRange[1])
+
+        for pp, j in product( sigPars, range( self.totPDF.GetNpar())):
+            if pp[0] == self.totPDF.GetParName(j):
+                if not pp[0] is None: self.totPDF.SetParName  (j, pp[0])
+                if not pp[1] is None: self.totPDF.SetParameter(j, pp[1])
+                if not pp[2] is None: self.totPDF.SetParLimits(j, pp[2][0], pp[2][1])
+        for pp, j in product( bacPars, range( self.totPDF.GetNpar())):
+            if pp[0] == self.totPDF.GetParName(j):
+                if not pp[0] is None: self.totPDF.SetParName  (j, pp[0])
+                if not pp[1] is None: self.totPDF.SetParameter(j, pp[1])
+                if not pp[2] is None: self.totPDF.SetParLimits(j, pp[2][0], pp[2][1])
+
 
     def UpdatePDFParameters(self, pars, epars):
         for ii, pp in enumerate(pars) : self.totPDF.SetParameter(ii, pp)
@@ -57,11 +71,6 @@ class fitterPDF():
                 covM[index] = self.covMatrixTot[ii*self.totPDF.GetNpar()+jj]
 
         return covM
-
-    def generatePDF(self, func):
-        if   isinstance(func, ROOT.TF1) : return func
-        elif isinstance(func, str)      : return ROOT.TF1('tempPDF', func, self.fitRange[0], self.fitRange[1])
-        else: raise ValueError('INPUT ERROR SETsignal function')
 
     def updateComponent(self, pdf):
         for ii, jj in product( range(pdf.GetNpar()), range(self.totPDF.GetNpar())):
