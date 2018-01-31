@@ -43,10 +43,11 @@ class TrgFitter ():
         self.pdfNum.SetPdfPars(sigPars=numParS, bacPars=numParB)
         self.pdfDen.SetPdfPars(sigPars=denParS, bacPars=denParB)
 
-    def SetOptions(self, fitOpt = "RIMQ", fitAttNo = 1, pdbFit = True):
+    def SetOptions(self, useGausSignal = False, fitOpt = "RIMQ", fitAttNo = 2, pdbFit = True):
         self.fitOpt         = fitOpt
         self.fitAttemptNo   = fitAttNo
         self.pdbFit         = pdbFit
+        self.useGausSignal = useGausSignal
 
     def AddBinnedVar(self, var, bins):
         self.varList[var] = bins
@@ -68,16 +69,14 @@ class TrgFitter ():
                     self.jsonStruc[vv][self.getBinRange(j, self.varList[vv][1])] = self.getEff(varName = vv, bins = self.varList[vv], is2D = True, indx = j)
 
         self.writeFiles()
-##
-## private members
 
     def getHistogram(self, name, cut):
         self.tree.Draw("%s>>%s(%s, %s, %s)" % (self.mainVar, name, self.nBins, self.fitRange[0], self.fitRange[1]), cut)
         return ROOT.gDirectory.Get(name)
 
     def fitHisto(self, histo, func):
-        for i in range (self.fitAttemptNo):
-            fitRes = histo.Fit(func, self.fitOpt)
+        for xx in range (self.fitAttemptNo):
+            histo.Fit(func, self.fitOpt)
 
         self.cvas.Update()
 
@@ -85,12 +84,22 @@ class TrgFitter ():
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
 
+        ## get the paramters
         parV = [func.GetParameter(ii) for ii in range( func.GetNpar())]
         parE = [func.GetParError(ii)  for ii in range( func.GetNpar())]
-        covM = ROOT.TVirtualFitter.GetFitter().GetCovarianceMatrix() 
-        covM = numpy.asarray([covM[mm] for mm in range( func.GetNpar()**2)])
+
+        ##get the covariance matrix
+        cMat =  ROOT.TMatrixDSym( func.GetNpar())
+        ROOT.gMinuit.mnemat( cMat.GetMatrixArray(), func.GetNpar())
+        covM = [cMat.GetMatrixArray()[zz] for zz in range( func.GetNpar()**2)]
+
+        ## diagonalize check
+        #covM = numpy.asarray( [covM[mm] if mm in [xx*6 for xx in range( func.GetNpar())] else 0 for mm in range( func.GetNpar()**2)] )
+        #import pdb ; pdb.set_trace()
+
 
         return (parV, parE, covM)
+        #return (parV, parE)
 
     def checkBeforeStart(self):
         if self.den        is None : print "Denominator not set"        ; return False
@@ -145,23 +154,25 @@ class TrgFitter ():
             binSize = (self.fitRange[1]-self.fitRange[0])/self.nBins
 
             ## get the integral
-            _intN = (    self.pdfNum.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
-                        (self.pdfNum.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1], 
-                                                                 self.pdfNum.GetSigParList(), self.pdfNum.GetSigCovMatrix()
-                        )**2)/(binSize**2)
-            )
-            _intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]),
-                        (self.pdfDen.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1],
-                                                                 self.pdfDen.GetSigParList(), self.pdfDen.GetSigCovMatrix()
-                        )**2)/(binSize**2)
-            )
+            if self.useGausSignal:    
+                intN = self.__getEvt(self.pdfNum.GetSigPDF())
+                intD = self.__getEvt(self.pdfDen.GetSigPDF())
+            else:
+                intN = (    self.pdfNum.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]) / binSize,
+                            (self.pdfNum.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1], 
+                                                                     self.pdfNum.GetSigParList(), self.pdfNum.GetSigCovMatrix()
+                            )**2)/(binSize**2)
+                )
+                intD = (    self.pdfDen.GetSigPDF().Integral( self.fitRange[0], self.fitRange[1]) / binSize,
+                            (self.pdfDen.GetSigPDF().IntegralError(  self.fitRange[0], self.fitRange[1],
+                                                                     self.pdfDen.GetSigParList(), self.pdfDen.GetSigCovMatrix()
+                            )**2)/(binSize**2)
+                )
 
-            intN = self.__getEvt(self.pdfNum.GetSigPDF())
-            intD = self.__getEvt(self.pdfDen.GetSigPDF())
 
             ## get the efficiency
             eff = intN[0]/intD[0]
-            err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1])
+            err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1] )
 
             ## results
             jsonOut[self.getBinRange(i, bins1)] = OrderedDict()
@@ -176,9 +187,9 @@ class TrgFitter ():
         binSize = (self.fitRange[1] - self.fitRange[0]) / self.nBins
 
         evt = abs(vNorm * vSigm * math.sqrt(2. * math.pi) / binSize)
-        err = (2.*math.pi) * ( (vNorm*eSigm)**2 + (vSigm*eNorm)**2 ) / (binSize**2)
+        er2 = (2.*math.pi) * ( (vNorm*eSigm)**2 + (vSigm*eNorm)**2) / (binSize**2)
 
-        return (evt, err)
+        return (evt, er2)
 
     def drawResults(self, histoN, histoD):
         outCvas = ROOT.TCanvas()
@@ -187,8 +198,14 @@ class TrgFitter ():
         self.pdfNum.GetBacPDF().SetLineStyle(ROOT.kDashed)
         self.pdfDen.GetBacPDF().SetLineStyle(ROOT.kDashed)
 
-        outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.GetTotPDF().Draw('same') ; self.pdfNum.GetBacPDF().Draw('same')
-        outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same')
+        self.pdfNum.GetSigPDF().SetLineColor(ROOT.kBlue) ; self.pdfNum.GetSigPDF().SetLineWidth(1) ; self.pdfNum.GetSigPDF().SetLineStyle(2)
+        self.pdfDen.GetSigPDF().SetLineColor(ROOT.kBlue) ; self.pdfDen.GetSigPDF().SetLineWidth(1) ; self.pdfDen.GetSigPDF().SetLineStyle(2)
+
+        histoN.SetMinimum(0)
+        histoD.SetMinimum(0)
+
+        outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.GetTotPDF().Draw('same') ; self.pdfNum.GetBacPDF().Draw('same') ; self.pdfNum.GetSigPDF().Draw("same")
+        outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same') ; self.pdfDen.GetSigPDF().Draw("same")
 
         return outCvas
 

@@ -21,22 +21,25 @@ num = 'pass'
 oth = '1'
 
 mainVar  = 'bMass'
-fileName = 'allStat'
+fileName = 'test'
 
 ## pdf's settings
 fitRange = (5.1, 5.4)
 nBins = 28
 
-numParB = [ ('a'     , None     , None)             ,
-            ('b'     , None     , None)             ,
+numParB = [ 
+            ('a'    , None  , None)                 ,
+            ('b'    , None  , None)                 ,
+
 ]
 numParS = [
             ('N'     , 10000    , (0, 100000))      ,
             ('#mu'   , 5.28     , (5.25, 5.30))     ,
             ('#sigma', 0.02     , (0.005, 0.1 ))    ,
 ]
-denParB = [ ('a'     , None     , None)             ,
-            ('b'     , None     , None)             ,
+denParB = [ 
+            ('a'    , None  , None)                 ,
+            ('b'    , None  , None)                 ,
 ]
 denParS = [
             ('N'     , 10000    , (0, 100000))      ,
@@ -48,8 +51,8 @@ ptBins  = np.array( [5, 15 , 35, 1000])
 etaBins = np.array( [0, 0.7, 1.5, 2.4])
 lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
 
-etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
 etaBinsGH = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
+etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
 lumiBinsGH= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 lumiBinsBF= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 
@@ -78,6 +81,6 @@ fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
 #fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetOptions(fitAttNo = 2, pdbFit = True)
+fitter.SetOptions(fitAttNo = 2, pdbFit = False, useGausSignal = False)
 
 fitter.CalculateEfficiency()
