@@ -25,7 +25,7 @@ oth = 'run < 278802'
 ## mainVar = variable to fit
 ## fileName = output file
 mainVar  = 'ds_mass'
-fileName = 'sample_fit'
+fileName = 'BF_asym'
 
 ## fit range defined over mainvar and number of bins used
 
@@ -72,8 +72,8 @@ denParS = [
 
 ## define the binning used
 wholeStat = np.array([0, 1000000])
-ptBins  = np.array( [8, 15])# , 35, 1000])
-etaBins = np.array( [0, 0.7])#, 1.5])
+ptBins  = np.array( [8, 15, 35, 1000])
+etaBins = np.array( [0, 0.7, 1.5])
 
 ## fitter object takes care of fit
 fitter = TrgFitter( tree     =  tree    , 
@@ -99,9 +99,9 @@ fitter.SetPDFs( numPDFs = 'gaus',
 
 ## add the variables to the fitter in the form (name, binning)
 ## 2D variables names must be separated by '__VS__' (NB two underscores per side)
-#fitter.AddBinnedVar('ds_pt'             , ptBins   )
+fitter.AddBinnedVar('ds_pt'             , ptBins   )
 #fitter.AddBinnedVar('ds_eta'            , etaBins  )
-fitter.AddBinnedVar('ds_pt__VS__ds_eta' , (ptBins, etaBins) )
+#fitter.AddBinnedVar('ds_pt__VS__ds_eta' , (ptBins, etaBins) )
 
 ##
 ## general options

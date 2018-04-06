@@ -7,7 +7,7 @@ from collections import OrderedDict
 from fitterPdf_c import fitterPDF
 
 class TrgFitter ():
-    def __init__(self, tree, mainVar, den, num, fitRange, nBins, oth = '1', fileName = 'outFile'):
+    def __init__(self, tree, mainVar, den, num, fitRange, nBins,  oth = '1', fileName = 'outFile'):
         self.den = den
         self.num = ' & '.join([num, den])
         self.oth = oth
@@ -43,11 +43,12 @@ class TrgFitter ():
         self.pdfNum.SetPdfPars(sigPars=numParS, bacPars=numParB)
         self.pdfDen.SetPdfPars(sigPars=denParS, bacPars=denParB)
 
-    def SetOptions(self, useGausSignal = False, fitOpt = "RIMQ", fitAttNo = 2, pdbFit = True):
+    def SetOptions(self, useGausSignal = False, useAsymErrors = True, fitOpt = "RIMQ", fitAttNo = 2, pdbFit = True):
         self.fitOpt         = fitOpt
         self.fitAttemptNo   = fitAttNo
         self.pdbFit         = pdbFit
         self.useGausSignal = useGausSignal
+        self.useAsymErrors = useAsymErrors
 
     def AddBinnedVar(self, var, bins):
         self.varList[var] = bins
@@ -171,15 +172,37 @@ class TrgFitter ():
 
 
             ## get the efficiency
-            eff = intN[0]/intD[0]
-            err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1] )
+            if self.useAsymErrors:
+                asy = self.getAsymEff(intN[0], math.sqrt(intN[1]), intD[0], math.sqrt(intD[1]))
+                eff = asy[0]
+                err = asy[1]
+            else:
+                eff = intN[0]/intD[0]
+                err = math.sqrt( ((1./intD[0])**2) * intN[1] + ((intN[0]/intD[0]**2)**2) * intD[1] )
 
             ## results
             jsonOut[self.getBinRange(i, bins1)] = OrderedDict()
             jsonOut[self.getBinRange(i, bins1)]['value'] = eff
-            jsonOut[self.getBinRange(i, bins1)]['error'] = err
+            if self.useAsymErrors:
+                jsonOut[self.getBinRange(i, bins1)]['errorUP']  = err[0]
+                jsonOut[self.getBinRange(i, bins1)]['errorDW']  = err[1]
+                jsonOut[self.getBinRange(i, bins1)]['error'] = math.sqrt(err[0]**2 + err[1]**2)
+            else:
+                jsonOut[self.getBinRange(i, bins1)]['error'] = err
 
         return jsonOut
+
+    def getAsymEff (self, vNum, eNum, vDen, eDen):
+        hPass = ROOT.TH1F('hP', 'passing events', 1, 0, 1)
+        hTotl = ROOT.TH1F('hT', 'total events'  , 1, 0, 1)
+
+        hPass.SetBinContent(1, vNum)
+        hPass.SetBinError(1, eNum)
+        hTotl.SetBinContent(1, vDen)
+        hTotl.SetBinError(1, eNum)
+
+        tEff = ROOT.TEfficiency(hPass, hTotl)
+        return tEff.GetEfficiency(1), (tEff.GetEfficiencyErrorUp(1), tEff.GetEfficiencyErrorLow(1))
 
     def __getEvt(self, pdf):
         vNorm = pdf.GetParameter(0) ; eNorm = pdf.GetParError(0)
