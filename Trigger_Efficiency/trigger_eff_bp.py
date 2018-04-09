@@ -21,10 +21,10 @@ num = 'pass'
 oth = '1'
 
 mainVar  = 'bMass'
-fileName = 'test'
+fileName = 'allStat_eta'
 
 ## pdf's settings
-fitRange = (5.1, 5.4)
+fitRange = (5.06, 5.6)
 nBins = 28
 
 numParB = [ 
@@ -67,9 +67,9 @@ fitter = TrgFitter( tree     =  tree    ,
 )
 
 fitter.SetPDFs( numPDFs = 'gaus', 
-                numPDFb = 'pol1', 
+                numPDFb = 'pol1(0)+gaus(2)', 
                 denPDFs = 'gaus', 
-                denPDFb = 'pol1', 
+                denPDFb = 'pol1(0)+gaus(2)', 
                 numParS = numParS, 
                 numParB = numParB, 
                 denParS = denParS, 
@@ -77,10 +77,11 @@ fitter.SetPDFs( numPDFs = 'gaus',
 )
 
 #fitter.AddBinnedVar('bp_pt'             , ptBins            )
-fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
+fitter.AddBinnedVar('bp_eta'               , etaBins)
+#fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
 #fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetOptions(fitAttNo = 2, pdbFit = False, useGausSignal = False)
+fitter.SetOptions(fitAttNo = 2, pdbFit = True, useGausSignal = False)
 
 fitter.CalculateEfficiency()

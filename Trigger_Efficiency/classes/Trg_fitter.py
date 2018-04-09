@@ -7,7 +7,7 @@ from collections import OrderedDict
 from fitterPdf_c import fitterPDF
 
 class TrgFitter ():
-    def __init__(self, tree, mainVar, den, num, fitRange, nBins,  oth = '1', fileName = 'outFile'):
+    def __init__(self, tree, mainVar, den, num, fitRangeDen, fitRangeNum, nBins, fitRange = None,  oth = '1', fileName = 'outFile'):
         self.den = den
         self.num = ' & '.join([num, den])
         self.oth = oth
@@ -28,17 +28,28 @@ class TrgFitter ():
 
         self.jsonStruc = OrderedDict()
 
-        self.fitRange = fitRange
+        self.fitRangeNum = fitRangeNum
+        self.fitRangeDen = fitRangeDen
+        
+        self.checkFitRange(fitRange)
 
         self.nBins= nBins
+        self.pVal = False
 
         self.SetOptions()
-##
-## public members
+
+    def checkFitRange(self, fitRange):
+        if fitRange is not None: 
+            self.fitRange = fitRange
+            return
+        else:
+            self.fitRange = (   min( self.fitRangeNum[0], self.fitRangeDen[0]),
+                                max( self.fitRangeNum[1], self.fitRangeDen[1])
+            )
 
     def SetPDFs(self, numPDFs, numPDFb, denPDFs, denPDFb, numParS, numParB, denParS, denParB):
-        self.pdfNum = fitterPDF(sigPDF = numPDFs, bacPDF=numPDFb, fitRange=self.fitRange, name = 'NUM')
-        self.pdfDen = fitterPDF(sigPDF = denPDFs, bacPDF=denPDFb, fitRange=self.fitRange, name = 'DEN')
+        self.pdfNum = fitterPDF(sigPDF = numPDFs, bacPDF=numPDFb, fitRange=self.fitRangeNum, name = 'NUM')
+        self.pdfDen = fitterPDF(sigPDF = denPDFs, bacPDF=denPDFb, fitRange=self.fitRangeDen, name = 'DEN')
 
         self.pdfNum.SetPdfPars(sigPars=numParS, bacPars=numParB)
         self.pdfDen.SetPdfPars(sigPars=denParS, bacPars=denParB)
@@ -84,6 +95,7 @@ class TrgFitter ():
         if self.pdbFit: import pdb ; pdb.set_trace()
         ## update to lates fit panel fit
         func = histo.GetFunction(func.GetName())
+        if func.GetProb() < 0.001: self.pVal = True
 
         ## get the paramters
         parV = [func.GetParameter(ii) for ii in range( func.GetNpar())]
@@ -108,7 +120,8 @@ class TrgFitter ():
         if self.pdfNum     is None : print "Nuimberator pdf not set"    ; return False
         if self.pdfDen     is None : print "Denominator pdf not set"    ; return False
         if self.tree       is None : print "tree not set"               ; return False
-        if self.fitRange   is None : print "Fit limits not set"         ; return False
+        if self.fitRangeDen is None: print "Fit limits not set"         ; return False
+        if self.fitRangeNum is None: print "Fit limits not set"         ; return False
         if self.nBins      is None : print "Number of bins not set"     ; return False
         if self.mainVar    is None : print "Main variable not set"      ; return False
         if len(self.varList) == 0  : print "No binned variable set"     ; return False
@@ -173,7 +186,7 @@ class TrgFitter ():
 
             ## get the efficiency
             if self.useAsymErrors:
-                asy = self.getAsymEff(intN[0], math.sqrt(intN[1]), intD[0], math.sqrt(intD[1]))
+                asy = self.getAsymEff(intN[0], intD[0])
                 eff = asy[0]
                 err = asy[1]
             else:
@@ -186,22 +199,24 @@ class TrgFitter ():
             if self.useAsymErrors:
                 jsonOut[self.getBinRange(i, bins1)]['errorUP']  = err[0]
                 jsonOut[self.getBinRange(i, bins1)]['errorDW']  = err[1]
-                jsonOut[self.getBinRange(i, bins1)]['error'] = math.sqrt(err[0]**2 + err[1]**2)
+                jsonOut[self.getBinRange(i, bins1)]['error'] = max(err[0], err[1])
             else:
                 jsonOut[self.getBinRange(i, bins1)]['error'] = err
 
+        if self.pVal == True: print 'You may want to check some of the fits'
         return jsonOut
 
-    def getAsymEff (self, vNum, eNum, vDen, eDen):
+    def getAsymEff (self, vNum, vDen):
         hPass = ROOT.TH1F('hP', 'passing events', 1, 0, 1)
         hTotl = ROOT.TH1F('hT', 'total events'  , 1, 0, 1)
 
         hPass.SetBinContent(1, vNum)
-        hPass.SetBinError(1, eNum)
+        hPass.SetBinError(1, math.sqrt(vNum))
         hTotl.SetBinContent(1, vDen)
-        hTotl.SetBinError(1, eNum)
+        hTotl.SetBinError(1, math.sqrt(vDen))
 
         tEff = ROOT.TEfficiency(hPass, hTotl)
+
         return tEff.GetEfficiency(1), (tEff.GetEfficiencyErrorUp(1), tEff.GetEfficiencyErrorLow(1))
 
     def __getEvt(self, pdf):

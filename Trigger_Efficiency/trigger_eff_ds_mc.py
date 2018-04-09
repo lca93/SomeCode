@@ -13,28 +13,28 @@ ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
 ## input file and tree
-iFile = ROOT.TFile('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016_skimmed.root')
+# iFile = ROOT.TFile('/afs/cern.ch/work/l/lguzzi/samples/ds_onia2016_skimmed.root')
+iFile = ROOT.TFile('/eos/user/m/manzoni/WTau3Mu/DsPhiMuMuPi_v1/DsPhiMuMuPi/DsPhiMuMuPiTreeProducer/tree.root')
 tree  = iFile.Get('tree')
 
 ## denominator and numerator definition. NOTE: no need to repeat the den in the num definition
 ## oth = other conditions (e.g. run number, lumi)
 den = 'ds_hasphi & mu1_muonid_soft & mu2_muonid_soft & sv_prob>0.1 & sv_ls>2 & sv_cos>0.999 & hlt_dimuon0_phi_barrel & pi_pt>1.2 & ds_pt > 8'
 num = 'hlt_doublemu3_trk_tau3mu'
-oth = 'run < 278802'
+oth = 'run > -1'
+# oth = 'run < 278802'
 
 ## mainVar = variable to fit
 ## fileName = output file
 mainVar  = 'ds_mass'
-fileName = 'BF_data'
+fileName = 'allStat_mc'
 
 ## fit range defined over mainvar and number of bins used
 
-fitRangeDen = ( 1.8, 
+fitRangeNum = (    1.8, 
                 2.1
 )
-fitRangeNum = ( 1.8, 
-                2.02
-)
+fitRangeDen = fitRangeNum
 nBins = 28
 
 ## parameter init as  (name, init. value, (boundaries))
@@ -42,14 +42,14 @@ nBins = 28
 ## parameters are fed to the fitter as numerator signal pars (numParS), numerator background pars (numPasB), ...
 ## NOTE: ROOT doesn't keep the parameter order when summing PDFs. If defining new PDFs, check from fit panel that the function is defined correctly
 numParB = [ 
-            ('N+'     , 1000     , (0, 100000))      ,
-            ('#mu+'   , 1.87     , (1.83, 1.90))     ,
-            ('#sigma+', 0.02     , (0.005, 0.1 ))   ,
+#             ('N+'     , 1000     , (0, 100000))      ,
+#             ('#mu+'   , 1.87     , (1.83, 1.90))     ,
+#             ('#sigma+', 0.02     , (0.005, 0.1 ))   ,
             ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
-            ('N_{2}'     , 1000     , (0, 100000))      ,
-            ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
-            ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
+#             ('N_{2}'     , 1000     , (0, 100000))      ,
+#             ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
+#             ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
 ]
 numParS = [
             ('Ns'     , 10000    , (0, 100000))      ,
@@ -57,14 +57,14 @@ numParS = [
             ('#sigmas', 0.02     , (0.005, 0.1 ))    ,
 ]
 denParB = [ 
-            ('N+'     , 1000     , (0, 100000))      ,
-            ('#mu+'   , 1.87     , (1.83, 1.90))     ,
-            ('#sigma+', 0.02     , (0.005, 0.1 ))   ,
+#             ('N+'     , 1000     , (0, 100000))      ,
+#             ('#mu+'   , 1.87     , (1.83, 1.90))     ,
+#             ('#sigma+', 0.02     , (0.005, 0.1 ))   ,
             ('a'     , None     , None)             ,
             ('b'     , None     , None)             ,
-            ('N_{2}'     , 1000     , (0, 100000))      ,
-            ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
-            ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
+#             ('N_{2}'     , 1000     , (0, 100000))      ,
+#             ('#mu_{2}'   , 1.87     , (1.85, 1.90))     ,
+#             ('#sigma_{2}', 0.02     , (0.01, 0.1 ))   ,
 ]
 denParS = [
             ('Ns'     , 10000    , (0, 100000))      ,
@@ -84,17 +84,17 @@ fitter = TrgFitter( tree     =  tree    ,
                     den      =  den     , 
                     num      =  num     , 
                     oth      =  oth     ,   
-                    fitRangeDen = fitRangeDen,
-                    fitRangeNum = fitRangeNum,
+                    fitRangeNum =  fitRangeNum,
+                    fitRangeDen =  fitRangeDen,
                     nBins    =  nBins   ,
                     fileName =  fileName,
 )
 
 ## set the fitter pdf
 fitter.SetPDFs( numPDFs = 'gaus', 
-                numPDFb = 'gaus(0)+pol1(3)', 
+                numPDFb = 'pol1', 
                 denPDFs = 'gaus', 
-                denPDFb = 'gaus(0)+pol1(3)', 
+                denPDFb = 'pol1', 
                 numParS = numParS, 
                 numParB = numParB, 
                 denParS = denParS, 
@@ -103,8 +103,8 @@ fitter.SetPDFs( numPDFs = 'gaus',
 
 ## add the variables to the fitter in the form (name, binning)
 ## 2D variables names must be separated by '__VS__' (NB two underscores per side)
-fitter.AddBinnedVar('ds_pt'             , ptBins   )
-fitter.AddBinnedVar('ds_eta'            , etaBins  )
+#fitter.AddBinnedVar('ds_pt'             , ptBins   )
+#fitter.AddBinnedVar('ds_eta'            , etaBins  )
 fitter.AddBinnedVar('ds_pt__VS__ds_eta' , (ptBins, etaBins) )
 
 ##
