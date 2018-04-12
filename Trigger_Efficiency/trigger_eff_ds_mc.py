@@ -103,7 +103,7 @@ fitter.SetPDFs( numPDFs = 'gaus',
 
 ## add the variables to the fitter in the form (name, binning)
 ## 2D variables names must be separated by '__VS__' (NB two underscores per side)
-#fitter.AddBinnedVar('ds_pt'             , ptBins   )
+fitter.AddBinnedVar('ds_pt'             , ptBins   )
 #fitter.AddBinnedVar('ds_eta'            , etaBins  )
 fitter.AddBinnedVar('ds_pt__VS__ds_eta' , (ptBins, etaBins) )
 

@@ -1,7 +1,4 @@
-## the code computes SFs for the pT VS eta binning specified
-## results are obtained with a weighted mean above the eta bins
-## the pT key is the one used in the anlysis, and requires a eta subkey (whole range 0-2.4)
-
+## get SFs from data and MC jsons
 import json
 import sys, os
 from collections import OrderedDict
@@ -19,60 +16,48 @@ jsonMC = json.load(fileMC, object_pairs_hook=OrderedDict)
 
 jsonOut  = open('HLT_track_SFs.json', 'w')
 
-mainVar = 'ds_pt__VS__ds_eta'
-mainKey = 'HLT_track_SFs'
+mainKey     = 'HLT_track_SFs'
+ptKey       = 'ds_pt'
+ptetaKey    = 'ds_pt__VS__ds_eta'
+
 jsonDict = OrderedDict()
 jsonDict[mainKey] = OrderedDict()
-jsonDict[mainKey][mainVar] = OrderedDict()
+jsonDict[mainKey][ptKey] = OrderedDict()
+jsonDict[mainKey][ptKey]['0.0,2.4'] = OrderedDict()
+jsonDict[mainKey][ptetaKey] = OrderedDict()
 
-jsonDict[mainKey]['pt'] = OrderedDict()
-jsonDict[mainKey]['pt']['0.0,2.4'] = OrderedDict()
 
-keyListEta = jsonDA[mainVar].keys()
-keyListEta = [str(kk) for kk in keyListEta]
-keyListPt  = jsonDA[mainVar][keyListEta[0]].keys()
-keyListPt = [str(kk) for kk in keyListPt]
 
-sfHisto = ROOT.TH2F('HLT_track_sf', 'HLT track SFs', len(keyListPt), 0, len(keyListPt),len(keyListEta), 0, len(keyListEta))
+## get pT SFs
+for kk in jsonDA[ptKey].keys():
+    kk = str(kk)
+    jsonDict[mainKey][ptKey]['0.0,2.4'][kk] = OrderedDict()
 
-##mainVar
-for i, ke in enumerate(keyListEta):
-    jsonDict[mainKey][mainVar][ke] = OrderedDict()
-    for j, kp in enumerate(keyListPt):
-        jsonDict[mainKey][mainVar][ke][kp] = OrderedDict()
-        dVal = unc.ufloat(
-            jsonDA[mainVar][ke][kp]['value'],
-            jsonDA[mainVar][ke][kp]['error'],
-        )
-        mVal = unc.ufloat(
-            jsonMC[mainVar][ke][kp]['value'],
-            jsonMC[mainVar][ke][kp]['error'],
-        )
-        sVal = dVal / mVal if mVal.nominal_value != 0 else unc.ufloat(1, 1)
-        
-        jsonDict[mainKey][mainVar][ke][kp]['value'] = sVal.nominal_value
-        jsonDict[mainKey][mainVar][ke][kp]['error'] = sVal.std_dev
+    num = unc.ufloat( jsonDA[ptKey][kk]['value'], jsonDA[ptKey][kk]['error'])
+    den = unc.ufloat( jsonMC[ptKey][kk]['value'], jsonMC[ptKey][kk]['error'])
 
-        sfHisto.SetBinContent( j+1, i+1, sVal.nominal_value)
-        sfHisto.SetBinError( j+1, i+1, sVal.std_dev)
+    rat = num / den if den.nominal_value != 0 else unc.ufloat(1, 1)
 
-## pt as weighted mean of mainVar for j in range( len(keyListPt)):
-    val = 0
-    err = 0
-    jsonDict[mainKey]['pt']['0.0,2.4'][keyListPt[j]] = OrderedDict()
-    for i in range( len(keyListEta)):
-        import pdb ; pdb.set_trace()
-        val += sfHisto.GetBinContent(j+1, i+1) / (sfHisto.GetBinError(j+1, i+1) **2)
-        err += 1. / sfHisto.GetBinError(j+1, i+1) **2 ## normalization
+    jsonDict[mainKey][ptKey]['0.0,2.4'][kk]['value'] = rat.nominal_value
+    jsonDict[mainKey][ptKey]['0.0,2.4'][kk]['error'] = rat.std_dev
 
-    val = val / err ## normalise    
-    err = math.sqrt( 1./err) ## define the error
+for cc in jsonDA[ptetaKey].keys():
+    cc = str(cc)
+    jsonDict[mainKey][ptetaKey][cc] = OrderedDict()
+    for kk in jsonDA[ptetaKey][cc].keys():
+        kk = str(kk)
+        jsonDict[mainKey][ptetaKey][cc][kk] = OrderedDict()
 
-    jsonDict[mainKey]['pt']['0.0,2.4'][keyListPt[j]]['value'] = val
-    jsonDict[mainKey]['pt']['0.0,2.4'][keyListPt[j]]['error'] = err
+        num = unc.ufloat( jsonDA[ptetaKey][cc][kk]['value'], jsonDA[ptetaKey][cc][kk]['error'])
+        den = unc.ufloat( jsonMC[ptetaKey][cc][kk]['value'], jsonMC[ptetaKey][cc][kk]['error'])
 
-jsonOut.write( json.dumps(jsonDict, indent=4, sort_keys=False))
+        rat = num / den if den.nominal_value != 0 else unc.ufloat(1, 1)      
+
+        jsonDict[mainKey][ptetaKey][cc][kk]['value'] = rat.nominal_value
+        jsonDict[mainKey][ptetaKey][cc][kk]['error'] = rat.std_dev  
+
+
+jsonOut.write(  json.dumps(jsonDict, indent=4, sort_keys=False))
 jsonOut.close()
-fileDA.close()
 fileMC.close()
-
+fileDA.close()
