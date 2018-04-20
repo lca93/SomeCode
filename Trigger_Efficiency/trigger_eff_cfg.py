@@ -16,17 +16,17 @@ tree  = iFile.Get('mTree')
 
 
 ## fitter settings
-den = '1'
-num = 'pass'
-oth = 'run > -1'
+den = ## denominator bool string
+num = ## numerator bool string
+oth = ## other bool
 
-mainVar  = 'bMass'
-fileName = 'allStat_eta_data'
+mainVar  = ## e.g. mass variable name
+fileName = ## outfile name
 
 ## pdf's settings
-fitRangeNum = (5.0, 5.6)
-fitRangeDen = fitRangeNum
-nBins = 30
+fitRangeNum = ## fit range num
+fitRangeDen = ## fit range den
+nBins = ## bin number
 
 numParB = [ 
             ('Norm'         , 5000      , (0, 10000))   ,
@@ -49,15 +49,10 @@ ptBins  = np.array( [5, 15 , 35, 1000])
 etaBins = np.array( [0, 0.4, 0.8, 1.2, 1.6, 2.0,  2.4])
 lumiBins= np.array( [0, 6000, 8000, 10000, 20000])
 
-etaBinsGH = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
-etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
-lumiBinsGH= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
-lumiBinsBF= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
+backgroundFitFunctionNUM  = 'expo(0)'
+signalFitFunnctionNUM     = 'gaus(0)'
 
-backgroundFitFunctionNUM  = '[0] * TMath::Erf( ([1]-x) / [2]) + expo(3)'
-#backgroundFitFunctionNUM  = 'expo(0)'
 backgroundFitFunctionDEN  = backgroundFitFunctionNUM
-signalFitFunnctionNUM     = '[0] * exp( -0.5 * (x-[1]) * (x-[1]) / ([2]*[2])) + [3] * exp( -0.5*(x - [1]) * (x - [1]) / ([4]*[4])) '
 signalFitFunnctionDEN     = signalFitFunnctionNUM
 
 fitter = TrgFitter( tree     =  tree    , 
@@ -81,11 +76,8 @@ fitter.SetPDFs( numPDFs = signalFitFunnctionNUM    ,
                 denParB = denParB, 
 )
 
-#fitter.AddBinnedVar('bp_eta'               , etaBins)
-#fitter.AddBinnedVar('bp_pt'             , ptBins            )
-fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
-#fitter.AddBinnedVar('iLumi'             , lumiBinsBF         )
-#fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
+fitter.AddBinnedVar('eta'            , etaBins  )
+fitter.AddBinnedVar('pt'             , ptBins   )
 
 fitter.SetOptions(
             fitAttNo = 2, 
