@@ -54,12 +54,13 @@ class TrgFitter ():
         self.pdfNum.SetPdfPars(sigPars=numParS, bacPars=numParB)
         self.pdfDen.SetPdfPars(sigPars=denParS, bacPars=denParB)
 
-    def SetOptions(self, useGausSignal = False, useAsymErrors = True, fitOpt = "RIMQ", fitAttNo = 2, pdbFit = True):
+    def SetOptions(self, useGausSignal = False, useAsymErrors = True, fitOpt = "RIMQ", fitAttNo = 2, pdbFit = True, DrawResidual = False):
         self.fitOpt         = fitOpt
         self.fitAttemptNo   = fitAttNo
         self.pdbFit         = pdbFit
         self.useGausSignal = useGausSignal
         self.useAsymErrors = useAsymErrors
+        self.DrawResidual  = DrawResidual
 
     def AddBinnedVar(self, var, bins):
         self.varList[var] = bins
@@ -126,6 +127,8 @@ class TrgFitter ():
         if self.mainVar    is None : print "Main variable not set"      ; return False
         if len(self.varList) == 0  : print "No binned variable set"     ; return False
 
+        if self.useGausSignal: print '!! Using gaussian parametrization for integral calculation !!'
+
         return True
 
     def getEff(self, varName, bins, is2D = False, indx = -1):
@@ -183,7 +186,6 @@ class TrgFitter ():
                             )**2)/(binSize**2)
                 )
 
-
             ## get the efficiency
             if self.useAsymErrors:
                 asy = self.getAsymEff(intN[0], intD[0])
@@ -231,7 +233,7 @@ class TrgFitter ():
 
     def drawResults(self, histoN, histoD):
         outCvas = ROOT.TCanvas()
-        outCvas.Divide(2, 1)
+        outCvas.Divide(2, 1+int(self.DrawResidual))
 
         self.pdfNum.GetBacPDF().SetLineStyle(ROOT.kDashed)
         self.pdfDen.GetBacPDF().SetLineStyle(ROOT.kDashed)
@@ -244,6 +246,31 @@ class TrgFitter ():
 
         outCvas.cd(1) ; histoN.Draw() ; self.pdfNum.GetTotPDF().Draw('same') ; self.pdfNum.GetBacPDF().Draw('same') ; self.pdfNum.GetSigPDF().Draw("same")
         outCvas.cd(2) ; histoD.Draw() ; self.pdfDen.GetTotPDF().Draw('same') ; self.pdfDen.GetBacPDF().Draw('same') ; self.pdfDen.GetSigPDF().Draw("same")
+
+        self.resNum = ROOT.TH1F('resN', 'Fit residual', self.nBins, self.fitRange[0], self.fitRange[1])
+        self.resDen = ROOT.TH1F('resD', 'Fit residual', self.nBins, self.fitRange[0], self.fitRange[1])
+
+        if self.DrawResidual:
+            for bb in range( histoN.GetSize() - 1):
+                if histoN.GetBinError(bb + 1) != 0: 
+                    self.resNum.SetBinContent( bb + 1, 
+                            (histoN.GetBinContent(bb + 1) - self.pdfNum.GetTotPDF().Eval( histoN.GetBinCenter( bb + 1))) / histoN.GetBinError(bb + 1)
+                    )
+                else: self.resNum.SetBinContent( bb + 1, 0)
+                if histoD.GetBinError(bb + 1) != 0: 
+                    self.resDen.SetBinContent( bb + 1, 
+                            (histoD.GetBinContent(bb + 1) - self.pdfDen.GetTotPDF().Eval( histoN.GetBinCenter( bb + 1))) / histoD.GetBinError(bb + 1)
+                    )
+                else: self.resDen.SetBinContent( bb + 1, 0)
+                
+                self.resNum.SetBinError(bb + 1, 1)
+                self.resDen.SetBinError(bb + 1, 1)
+
+            outCvas.cd(3) ; self.resNum.SetMarkerStyle(10); self.resNum.Draw('E1')
+            outCvas.cd(4) ; self.resDen.SetMarkerStyle(10); self.resDen.Draw('E1')
+
+            outCvas.GetListOfPrimitives()[2].SetGridy()
+            outCvas.GetListOfPrimitives()[3].SetGridy()
 
         return outCvas
 

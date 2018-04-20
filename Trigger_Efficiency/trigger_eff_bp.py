@@ -18,31 +18,28 @@ tree  = iFile.Get('mTree')
 ## fitter settings
 den = '1'
 num = 'pass'
-oth = '1'
+oth = 'run > -1'
 
 mainVar  = 'bMass'
-fileName = 'allStat_data'
+fileName = 'allStat_eta_data'
 
 ## pdf's settings
-fitRangeNum = (5.05, 5.8)
+fitRangeNum = (5.0, 5.6)
 fitRangeDen = fitRangeNum
-nBins = 40
+nBins = 30
 
 numParB = [ 
-            ('Norm'         , 100       , (0, 2000))     ,
-            ('Edge'         , 5.12      , (5.10, 5.15))  ,
-            ('Den'          , 0.03      , (0.015, 0.2))  ,
-            ('m'            , None      ,  None)         ,
-            ('A'            , 10        , (1, 50))       ,
-            ('B'            , -1        , (-10, 0))      ,
-
+            ('Norm'         , 5000      , (0, 10000))   ,
+            ('Edge'         , 5.13      , (5.12, 5.2))  ,
+            ('Den'          , 0.05      , (0.02, 0.2))  ,
+            ('A'            , 10        , (0, 50))      ,
+            ('B'            , -1        , (-10, 0))     ,
 ]
 numParS = [
             ('N'     , 10000     , (0, 100000))     ,
             ('#mu'   , 5.28      , (5.22    , 5.30)),
             ('#sigma', 0.02      , (0.01, 0.1 ))    ,
             ('N2'     , 10000    , (0, 100000))     ,
-            ('#mu2'   , 5.28     , (5.22, 5.30))    ,
             ('#sigma2', 0.02     , (0.01, 0.1 ))    ,
 ]
 denParB = numParB
@@ -57,8 +54,11 @@ etaBinsBF = np.array([0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4])
 lumiBinsGH= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 lumiBinsBF= np.array( [0, 4000, 6500, 7000, 9000, 10000, 20000])
 
-backgroundFitFunction   = '[0] * ( TMath::Erf( ([1]-x) / [2]) + 1. + x*[3] + expo(4))'
-signalFitFunnction      = 'gaus(0) + gaus(3)'
+backgroundFitFunctionNUM  = '[0] * TMath::Erf( ([1]-x) / [2]) + expo(3)'
+#backgroundFitFunctionNUM  = 'expo(0)'
+backgroundFitFunctionDEN  = backgroundFitFunctionNUM
+signalFitFunnctionNUM     = '[0] * exp( -0.5 * (x-[1]) * (x-[1]) / ([2]*[2])) + [3] * exp( -0.5*(x - [1]) * (x - [1]) / ([4]*[4])) '
+signalFitFunnctionDEN     = signalFitFunnctionNUM
 
 fitter = TrgFitter( tree     =  tree    , 
                     mainVar  =  mainVar , 
@@ -71,22 +71,27 @@ fitter = TrgFitter( tree     =  tree    ,
                     fileName =  fileName,
 )
 
-fitter.SetPDFs( numPDFs = signalFitFunnction    ,
-                numPDFb = backgroundFitFunction ,
-                denPDFs = signalFitFunnction    ,
-                denPDFb = backgroundFitFunction ,
+fitter.SetPDFs( numPDFs = signalFitFunnctionNUM    ,
+                numPDFb = backgroundFitFunctionNUM ,
+                denPDFs = signalFitFunnctionDEN    ,
+                denPDFb = backgroundFitFunctionNUM ,
                 numParS = numParS, 
                 numParB = numParB, 
                 denParS = denParS, 
                 denParB = denParB, 
 )
 
-fitter.AddBinnedVar('bp_eta'               , etaBins)
+#fitter.AddBinnedVar('bp_eta'               , etaBins)
 #fitter.AddBinnedVar('bp_pt'             , ptBins            )
-#fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
-#fitter.AddBinnedVar('iLumi'             , lumiBinsGH         )
+fitter.AddBinnedVar('bp_eta'            , etaBinsGH           )
+#fitter.AddBinnedVar('iLumi'             , lumiBinsBF         )
 #fitter.AddBinnedVar('bp_pt__VS__bp_eta' , (ptBins, etaBins) )
 
-fitter.SetOptions(fitAttNo = 2, pdbFit = False, useGausSignal = False)
+fitter.SetOptions(
+            fitAttNo = 2, 
+            pdbFit = False, 
+            useGausSignal = False, 
+            DrawResidual = True
+)
 
 fitter.CalculateEfficiency()

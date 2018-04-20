@@ -9,7 +9,7 @@ ROOT.gROOT.SetBatch(ROOT.kTRUE)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.gROOT.ProcessLine("gErrorIgnoreLevel = kFatal;")
 
-iName = 'results/%s.json' % str(sys.argv[1])
+iName = '%s.json' % str(sys.argv[1])
 iFile = open(iName, 'r')
 oName = '%s_plot' % str(sys.argv[1])
 
@@ -25,13 +25,13 @@ plotter = keyPlotter(   iFile = iFile,
                         oName = oName,
 )
 
-plotter.SetOptions( useXerror = True)
+plotter.SetOptions( useXerror = False)
 plotter.SetAttributes( separator2D = '_')
 
 #plotter.AddKey( keyName = 'pt'  , is2D = False)
 plotter.AddKey( keyName = 'bp_eta' , is2D = False)
 #plotter.AddKey( keyName = 'pt_eta', is2D = True)
 #plotter.AddKey( keyName = 'ds_pt__VS__ds_eta', is2D = True)
-#plotter.AddKey( keyName = 'iLumi'  , is2D = False, xArray = xArrayLumiAl)
+#plotter.AddKey( keyName = 'iLumi'  , is2D = False, xArray = xArrayLumiBF)
 
 plotter.Plot()  
