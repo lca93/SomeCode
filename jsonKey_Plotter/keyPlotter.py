@@ -29,9 +29,9 @@ plotter.SetOptions( useXerror = False)
 plotter.SetAttributes( separator2D = '_')
 
 #plotter.AddKey( keyName = 'pt'  , is2D = False)
-plotter.AddKey( keyName = 'bp_eta' , is2D = False)
+#plotter.AddKey( keyName = 'bp_eta' , is2D = False)
 #plotter.AddKey( keyName = 'pt_eta', is2D = True)
 #plotter.AddKey( keyName = 'ds_pt__VS__ds_eta', is2D = True)
-#plotter.AddKey( keyName = 'iLumi'  , is2D = False, xArray = xArrayLumiBF)
+plotter.AddKey( keyName = 'iLumi'  , is2D = False, xArray = xArrayLumiBF)
 
 plotter.Plot()  
