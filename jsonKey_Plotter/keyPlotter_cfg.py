@@ -1,7 +1,7 @@
 import ROOT
 import sys
 import numpy as np
-from classes.keyPlotter_c import keyPlotter
+from classes.keyPlotter import keyPlotter
 
 ROOT.gStyle.SetOptFit(1111)
 ROOT.gStyle.SetOptStat(1000000001)
