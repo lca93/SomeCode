@@ -32,10 +32,10 @@ etaBin    = np.array([0, 0.9, 1.2, 2.1, 2.4])
 
 
 ## path variables
-DIR  = "/afs/cern.ch/work/l/lguzzi/CMSSW_8_0_25/src/MuonAnalysis/all_together/Eff/2DPlots/" + str(sys.argv[1])
+DIR  = "./" + str(sys.argv[1])
 MC   = "mc_"+str(sys.argv[1])+".root"
 DATA = "data_"+str(sys.argv[1])+".root"
-PATH = "/afs/cern.ch/work/l/lguzzi/CMSSW_8_0_25/src/MuonAnalysis/all_together/root_files"
+PATH = "../root_files/"
 Data_path   = PATH+"/data/"+DATA
 MC_path     = PATH+"/mc/"+MC
 

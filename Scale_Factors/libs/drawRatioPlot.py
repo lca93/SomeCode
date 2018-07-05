@@ -6,8 +6,8 @@ import uncertainties as unc
 
 def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False):
     ## define some ranges
-    yRatioHigh = 1.1*max(sfList)[0].nominal_value if max(sfList)[0].nominal_value < 2.5 else 2.5
-    yRatioLow  = 0.9*min(sfList)[0].nominal_value if min(sfList)[0].nominal_value > 0.0 else 0.5
+    yRatioHigh = 1.1*max(sfList)[0].nominal_value if max(sfList)[0].nominal_value < 20.5 else 20.5
+    yRatioLow  = 0.9*min(sfList)[0].nominal_value if min(sfList)[0].nominal_value > 0.0 else 0.0
     yEffHigh = 1.3*max ( ROOT.TMath.MaxElement(daGraph.GetN(), daGraph.GetY()),
                          ROOT.TMath.MaxElement(mcGraph.GetN(), mcGraph.GetY()))
     yEffLow  = 0
@@ -23,7 +23,7 @@ def printRatioGraphs (daGraph, mcGraph, sfList, varName, printDir, logx = False)
     supportRat.GetXaxis().SetLimits(xLow, xHigh)
 
     ## create the legend
-    legPad = ROOT.TLegend(0.7, 0.35, 0.85, 0.25)
+    legPad = ROOT.TLegend(0.7, 0.55, 0.85, 0.45)
     legPad.AddEntry(daGraph, "Data", "lp")
     legPad.AddEntry(mcGraph, "MC"  , "lp")
 

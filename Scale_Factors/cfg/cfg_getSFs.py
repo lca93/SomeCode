@@ -10,10 +10,11 @@ etaBins    = np.array([-2.4, -2.1, -1.6, -1.2, -0.9, -0.3, -0.2, 0.2, 0.3, 0.9, 
 nVtxBins   = np.array([0.5,2.5,4.5,6.5,8.5,10.5,12.5,14.5,16.5,18.5,20.5,22.5,24.5,26.5,28.5,30.5,32.5,34.5,36.5,38.5,40.5,42.5,44.5,46.5,48.5,50.5])
 absetaBins = np.array([0, 0.9, 1.2, 2.1, 2.4])
 
+
 ## varuables
-varList =[  ("pt"   , ptBins  ),
-            ("eta"  , etaBins ),
-            ("nVtx" , nVtxBins),
+varList =[  #("pt"   , ptBins  ),
+            #("eta"  , etaBins ),
+            #("nVtx" , nVtxBins),
             ("pt_abseta", (ptBins, absetaBins)),
 ]
 
